@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل المبيعات</title>
+    <link href="lib/css/sweetalert2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <input type="file" id="restore-file-input" accept=".json" style="display: none;">
+    <!-- Navigation Bar -->
+    <button class="nav-toggle" onclick="toggleNav()" style="display: none;">☰</button>
+    <div class="content-wrapper">
+        <div class="nav-bar" id="main-menu">
+            <a href="#sales" onclick="showPage('sales')" class="active">المبيعات</a>
+            <a href="#sales-history" onclick="showPage('sales-history')" class="admin-only">سجل المبيعات</a>
+            <a href="#add-product" onclick="showPage('add-product')" class="admin-only">الأصناف</a>
+            <a href="#item-movement" onclick="showPage('item-movement')" class="admin-only">حركة الصنف</a>
+            <a href="#workshop" onclick="showPage('workshop')">الورشة</a>
+            <a href="#returns" onclick="showPage('returns')">المرتجعات</a>
+            <a href="#expenses" onclick="showPage('expenses')" class="admin-only">المصروفات</a>
+            <a href="#receiving" onclick="showPage('receiving')" class="admin-only">استلام بضاعة</a>
+            <a href="#users" onclick="showPage('users')" class="admin-only">إدارة المستخدمين</a>
+            <a href="#branches" onclick="showPage('branches')" class="admin-only">الفروع</a>
+            <a href="#" onclick="refreshData()">تحديث البيانات</a>
+            <a href="#" onclick="backupData()" class="admin-only">نسخ احتياطي للبيانات</a>
+            <a href="#" onclick="triggerRestore()" class="admin-only">استعادة بيانات</a>
+            <a href="#" onclick="logout()" class="logout-btn">تسجيل الخروج</a>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="page-content">
+
+            <!-- Login Page -->
+            <div class="container" id="home">
+                <img src="image.png" alt="مستر فضة" id="logo-image">
+                <hr class="separator">
+                <p>يرجى تسجيل الدخول:</p>
+                <label for="username">اسم المستخدم:</label>
+                <input type="text" id="username" placeholder="ادخل اسم المستخدم">
+                <label for="password">كلمة المرور:</label>
+                <input type="password" id="password" placeholder="ادخل كلمة المرور">
+                <div style="margin-bottom: 15px;">
+                    <input type="checkbox" id="remember-me" style="width: auto; margin-left: 8px;">
+                    <label for="remember-me" style="display: inline;">تذكرني</label>
+                    <hr class="separator">
+                </div>
+                <button onclick="login()">تسجيل الدخول</button>
+            </div>
+
+            <!-- Sales Page -->
+            <div class="container" id="sales">
+                <h2>تسجيل عملية بيع</h2>
+                <label for="branch-select">الفرع:</label>
+                <select id="branch-select"></select>
+
+                <label for="product-select">الصنف:</label>
+                <select id="product-select"></select>
+
+                <label for="sale-quantity">الكمية (بالجرام):</label>
+                <input type="number" id="sale-quantity" placeholder="الكمية" step="0.01">
+
+                <label for="sale-price">سعر البيع:</label>
+                <input type="number" id="sale-price" placeholder="سعر البيع">
+
+                <label for="customer-phone">رقم هاتف العميل (اختياري):</label>
+                <input type="tel" id="customer-phone" placeholder="رقم هاتف العميل" dir="rtl">
+
+                <label for="sale-details">التفاصيل:</label>
+                <textarea id="sale-details" placeholder="تفاصيل إضافية"></textarea>
+
+                 <!-- Customer Details Textarea (Optional) -->
+                 <label for="customer-details">بيانات العميل (اختياري):</label>
+                 <textarea id="customer-details" placeholder="بيانات العميل"></textarea>
+
+                <!-- Payment Method Dropdown -->
+                <label for="payment-method">وسيلة الدفع:</label>
+                <select id="payment-method">
+                    <option value="نقدي">نقدي</option>
+                    <option value="فيزا">فيزا</option>
+                    <option value="انستاباي">انستاباي</option>
+                </select>
+
+                <button onclick="recordSale()">تسجيل عملية البيع</button>
+
+                <!-- Target Table -->
+                <table id="target-table">
+                    <thead>
+                        <tr>
+                            <th>المستخدم</th>
+                            <th>إجمالي المبيعات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Target data will be added here -->
+                    </tbody>
+                </table>
+
+                <!-- Daily Sales Table -->
+                <table id="daily-sales-table">
+                    <thead>
+                        <tr>
+                            <th>الصنف</th>
+                            <th>الكمية</th>
+                            <th>السعر</th>
+                            <th>التفاصيل</th>
+                            <th>وسيلة الدفع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Daily sales data will be added here -->
+                    </tbody>
+                </table>
+
+                <hr class="separator">
+
+                <!-- Employee Daily Sales Query Section -->
+                <h3>استعلام عن مبيعات الموظف اليومية</h3>
+                <label for="employee-select">اختر الموظف:</label>
+                <select id="employee-select"></select>
+                <button onclick="queryEmployeeDailySales()">استعلام</button>
+                <hr class="separator">
+                <div class="table-wrapper">
+                    <table id="employee-daily-sales-table">
+                        <thead>
+                            <tr>
+                                <th>الصنف</th>
+                                <th>الكمية</th>
+                                <th>السعر</th>
+                                <th>التفاصيل</th>
+                                <th>وسيلة الدفع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Employee daily sales data will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sales History Page -->
+            <div class="container" id="sales-history">
+                <h2>سجل المبيعات</h2>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <label for="branch-filter">الفرع:</label>
+                    <select id="branch-filter">
+                        <option value="">الكل</option>
+                        <!-- Options will be added by JS -->
+                    </select>
+                    <label for="date-from">من تاريخ:</label>
+                    <input type="date" id="date-from">
+                    <label for="date-to">إلى تاريخ:</label>
+                    <input type="date" id="date-to">
+                    <input type="text" id="search-sales" placeholder="بحث...">
+                    <button onclick="performSearch()">بحث</button>  <!-- This button triggers the display -->
+                </div>
+
+                <!-- Table Wrapper for Horizontal Scrolling -->
+                <div class="table-wrapper">
+                    <!-- Sales Section -->
+                    <h3>المبيعات</h3>
+                    <table id="sales-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الفرع</th>
+                                <th>المنتج</th>
+                                <th>الكمية</th> <!-- Added Quantity Header -->
+                                <th>السعر</th>
+                                <th>رقم هاتف العميل</th> <!-- Added Customer Phone -->
+                                <th>التفاصيل</th>
+                                <th>بيانات العميل</th>  <!-- NEW: Customer Details Column -->
+                                <th>المستخدم</th>
+                                <th>وسيلة الدفع</th>
+                                <th></th><!--for edit and delete-->
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Sales will be listed here (initially empty) -->
+                        </tbody>
+                    </table>
+
+                    <!-- Returns Section -->
+                    <h3 style="margin-top: 30px;">المرتجعات</h3>
+                    <table id="returns-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المنتج</th>
+                                <th>الكمية</th>
+                                <th>السعر</th>
+                                <th>السبب</th>
+                                <th>المستخدم</th>
+                                <th></th> <!-- For edit and delete btns -->
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Returns will be listed here (initially empty) -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>            <!-- Add Product Page -->
+            <div class="container" id="add-product">
+                <h2>إضافة صنف جديد</h2>
+
+                <label for="add-product-branch-select">الفرع:</label>
+                <select id="add-product-branch-select"></select>
+
+                <label for="new-product-name">اسم الصنف:</label>
+                <input type="text" id="new-product-name" placeholder="اسم الصنف">
+                <label for="new-product-quantity">الكمية (بالجرام):</label>
+                <input type="number" id="new-product-quantity" placeholder="الكمية" step="0.01">
+                <button onclick="addProduct()">إضافة الصنف</button>
+                <hr class="separator">
+
+                <h3>الأصناف الحالية</h3>
+                <div id="products-tables-container">
+                    <!-- Products tables will be generated here -->
+                </div>
+            </div>
+
+            <!-- Returns Page -->
+            <div class="container" id="returns">
+                <h2>المرتجعات</h2>
+                <label for="returns-branch-select">الفرع:</label>
+                <select id="returns-branch-select"></select>
+
+                <label for="return-product-select">المنتج:</label>
+                <select id="return-product-select">
+                    <!-- Products will be populated here -->
+                </select>
+
+                <label for="return-quantity">الكمية:</label>
+                <input type="number" id="return-quantity" placeholder="أدخل الكمية" min="1" value="1">
+
+                <label for="return-price">السعر الاجمالي:</label>
+                <input type="number" id="return-price" placeholder="أدخل السعر الاجمالي للمرتجع">
+
+                <label for="return-reason">سبب الارتجاع:</label>
+                <textarea id="return-reason" placeholder="أدخل سبب الارتجاع"></textarea>
+
+                <button onclick="recordReturn()">تسجيل الارتجاع</button>
+            </div>
+
+            <!-- Receiving Goods Page -->
+            <div class="container" id="receiving">
+                <h2>استلام بضاعة جديدة</h2>
+                <label for="receiving-branch-select">الفرع:</label>
+                <select id="receiving-branch-select"></select>
+
+                <label for="receive-product-select">الصنف المستلم:</label>
+                <select id="receive-product-select"></select>
+                <label for="receive-quantity">الكمية المستلمة:</label>
+                <input type="number" id="receive-quantity" placeholder="الكمية">
+                <label for="purchase-price">سعر شراء الجرام:</label>
+                <input type="number" id="purchase-price" placeholder="سعر شراء الجرام">
+                <label for="supplier-name">اسم المورد:</label>
+                <input type="text" id="supplier-name" placeholder="اسم المورد">
+                <button onclick="recordReceiving()">استلام البضاعة</button>
+                <hr class="separator">
+
+                 <!-- Filters -->
+                <div class="filters">
+                    <label for="receiving-branch-filter">الفرع:</label>
+                    <select id="receiving-branch-filter">
+                        <option value="">الكل</option>
+                        <!-- Options will be added by JS -->
+                    </select>
+                    <label for="receiving-date-from">من تاريخ:</label>
+                    <input type="date" id="receiving-date-from">
+                    <label for="receiving-date-to">إلى تاريخ:</label>
+                    <input type="date" id="receiving-date-to">
+                    <button onclick="showPurchases()">بحث</button>
+                </div>
+
+
+                <h3>سجل المشتريات</h3>
+                <div class="table-wrapper">
+                    <table id="purchases-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الفرع</th>
+                                <th>الصنف</th>
+                                <th>الكمية</th>
+                                <th>سعر الشراء الجرام</th>
+                                <th>المورد</th>
+                                <th>المستخدم</th>
+                                <th></th><!--for edit,delete-->
+                            </tr>
+                        </thead>
+                        <tbody id="purchases-list">
+                            <!-- Purchases will be listed here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Expenses Page -->
+            <div class="container" id="expenses">
+                <h2>تسجيل المصروفات</h2>
+
+                <label for="expense-branch-select">الفرع:</label>
+                <select id="expense-branch-select" onchange="updateExpenseForm()">
+                    <option value="">اختر الفرع</option>
+                    <!-- Branches dynamically added here -->
+                </select>
+
+                <label for="expense-type">نوع المصروف:</label>
+                <select id="expense-type" onchange="updateExpenseForm()">
+                    <option value="أخرى">أخرى</option>
+                    <option value="مرتبات">مرتبات</option>
+                    <option value="شراء فضة كسر">شراء فضة كسر</option>
+                </select>
+
+                <div id="expense-user-div" style="display: none;">
+                    <label for='expense-user-select'>المستخدم</label>
+                    <select id="expense-user-select">
+                        <option value=''>اختر المستخدم</option>
+                        <!-- options of users here -->
+                    </select>
+                </div>
+
+                <div id="expense-scrap-fields" style="display: none;">
+                    <label>تفاصيل شراء فضة كسر</label>
+                    <!-- Changed to select -->
+                    <select id='expense-scrap-type'>
+                        <option value="">اختر الصنف</option>
+                    </select>
+                    <input id='expense-scrap-quantity' type='number' step='0.01' placeholder='الكمية بالجرام'>
+                </div>
+
+                <label for="expense-amount">قيمة المصروف:</label>
+                <input type="number" id="expense-amount" placeholder="أدخل قيمة المصروف">
+
+                <label for="expense-description">التوضيح:</label>
+                <textarea id="expense-description" placeholder="أدخل تفاصيل المصروف"></textarea>
+
+                <button onclick="recordExpense()">تسجيل المصروف</button>
+                <hr class="separator">
+
+                <!-- Filters -->
+                <div class="filters">
+                    <label for="expenses-branch-filter">الفرع:</label>
+                    <select id="expenses-branch-filter">
+                        <option value="">الكل</option>
+                        <!-- Options will be added by JS -->
+                    </select>
+                    <label for="expenses-date-from">من تاريخ:</label>
+                    <input type="date" id="expenses-date-from">
+                    <label for="expenses-date-to">إلى تاريخ:</label>
+                    <input type="date" id="expenses-date-to">
+                    <input type="text" id="search-expenses" placeholder="بحث في المصروفات...">
+                    <button onclick="showExpenses()">بحث</button>
+                </div>
+
+                <h3>سجل المصروفات</h3>
+                <div class='table-wrapper' id="expenses-table-wrapper" style="display: none;">
+                    <table id="expenses-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الفرع</th>
+                                <th>نوع المصروف</th>
+                                <th>المستخدم</th>
+                                <th>تفاصيل الكسر</th>
+                                <th>القيمة</th>
+                                <th>التوضيح</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenses-list">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- User Management Page -->
+            <div class="container" id="users">
+                <h2>إدارة المستخدمين</h2>
+                <div id="user-management">
+                    <h3>إضافة مستخدم جديد</h3>
+                    <label for="new-username">اسم المستخدم الجديد:</label>
+                    <input type="text" id="new-username" placeholder="اسم المستخدم">
+                    <label for="new-password">كلمة المرور الجديدة:</label>
+                    <input type="password" id="new-password" placeholder="كلمة المرور">
+                    <label for="new-user-role">نوع المستخدم:</label>
+                    <select id="new-user-role">
+                        <option value="user">مستخدم عادي</option>
+                        <option value="admin">مسؤول</option>
+                    </select>
+                    <button onclick="addUser()">إضافة مستخدم</button>
+
+                    <h3>قائمة المستخدمين</h3>
+                    <table id="users-list">
+                        <thead>
+                            <tr>
+                                <th>اسم المستخدم</th>
+                                <th>نوع المستخدم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Users will be listed here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Branches Page -->
+            <div class="container" id="branches">
+                <h2>إدارة الفروع</h2>
+                <div class="section">
+                    <h3>إضافة فرع جديد</h3>
+                    <label for="new-branch-name">اسم الفرع:</label>
+                    <input type="text" id="new-branch-name" placeholder="أدخل اسم الفرع">
+                    <label>اختيار المستخدمين للفرع:</label>
+                    <div id="branch-users-list" class="checkbox-list"></div>
+                    <button onclick="addBranch()">إضافة الفرع</button>
+                </div>
+                <div class="section">
+                    <h3>الفروع الحالية</h3>
+                    <div id="existing-branches"></div>
+                </div>
+            </div>
+
+            <!-- Workshop Page -->
+            <div class="container" id="workshop">
+                <h2>تسجيل عمليات الورشة</h2>
+
+                <label for="workshop-branch-select">الفرع:</label>
+                <select id="workshop-branch-select">
+                    <!-- Branches will be populated here -->
+                </select>
+
+                <label for="workshop-description">وصف العملية:</label>
+                <textarea id="workshop-description" placeholder="وصف العملية"></textarea>
+
+                <label for="workshop-price">السعر:</label>
+                <input type="number" id="workshop-price" placeholder="السعر">
+
+                <label for="workshop-customer-phone">رقم هاتف العميل (اختياري):</label>
+                <input type="tel" id="workshop-customer-phone" placeholder="رقم هاتف العميل" dir="rtl">
+
+                <label for="workshop-payment-method">وسيلة الدفع:</label>
+                <select id="workshop-payment-method">
+                    <option value="نقدي">نقدي</option>
+                    <option value="فيزا">فيزا</option>
+                    <option value="انستاباي">انستاباي</option>
+                </select>
+
+                <label for="workshop-customer-details">بيانات العميل (اختياري):</label>
+                <textarea id="workshop-customer-details" placeholder="بيانات العميل"></textarea>
+
+                <button onclick="recordWorkshopOperation()">تسجيل العملية</button>
+                <hr class="separator">
+
+                <!-- **أضف قسم الفلاتر هنا** -->
+                <div class="filters">
+                    <label for="workshop-branch-filter">الفرع:</label>
+                    <select id="workshop-branch-filter">
+                        <option value="">الكل</option>
+                        <!-- Options will be added by JS -->
+                    </select>
+                    <label for="workshop-date-from">من تاريخ:</label>
+                    <input type="date" id="workshop-date-from">
+                    <label for="workshop-date-to">إلى تاريخ:</label>
+                    <input type="date" id="workshop-date-to">
+                    <button onclick="showWorkshopOperations()">استعلام</button> <!- **تعديل الزر** ->
+                </div>
+
+                <!-- **عدّل هنا لإخفاء الجدول افتراضياً وأضف id ** -->
+                <div id="workshop-tables-container" style="display: none;"> <!- **إخفاء الجدول هنا** ->
+                    <!-- Workshop tables will be generated here -->
+                </div>
+            </div>
+
+            <!-- NEW: Item Movement Page -->
+            <div class="container" id="item-movement">
+                <h2>حركة الصنف</h2>
+                <label for="item-movement-branch-select">الفرع:</label>
+                <select id="item-movement-branch-select"></select>
+
+                <label for="item-movement-product-select">الصنف:</label>
+                <select id="item-movement-product-select">
+                    <option value="">اختر الصنف</option>
+                    <!-- Products will be populated here -->
+                </select>
+
+                <label for="item-movement-date-from">من تاريخ:</label>
+                <input type="date" id="item-movement-date-from">
+
+                <label for="item-movement-date-to">إلى تاريخ:</label>
+                <input type="date" id="item-movement-date-to">
+
+                <button onclick="showItemMovement()">استعلام</button>
+                <hr class="separator">
+                <div class="table-wrapper">
+                    <table id="item-movement-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>كمية البيع</th>
+                                <th>سعر البيع</th>
+                                <th>سعر الشراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Item movement data will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+           </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div id="connection-status">غير متصل</div>
+        <span>EAGLE.CO FOR SOFTWARE DEVELOPMENT ©</span>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="lib/js/sweetalert2.min.js"></script>
+    <script src="main.js"></script>
+    <script src="sales.js"></script>
+    <script src="salesHistory.js"></script>
+    <script src="addProduct.js"></script>
+    <script src="returns.js"></script>
+    <script src="receiving.js"></script>
+    <script src="expenses.js"></script>
+    <script src="users.js"></script>
+    <script src="branches.js"></script>
+    <script src="helpers.js"></script>
+    <script src="refresh.js"></script>
+    <script src="workshop.js"></script>
+    <script src="itemMovement.js"></script>
+    <script src="backupRestore.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,727 @@
+ /* style.css */
+
+ body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+    direction: rtl;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: auto; /* ADDED THIS: Enable horizontal scrolling on the body */
+}
+
+.content-wrapper {
+    display: flex;
+    flex: 1; /* Grow to fill available space*/
+    flex-direction: row-reverse; /* Reverse the order for RTL */
+}
+
+.container {
+    max-width: 95%;
+    margin: 10px auto;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+h1, h2, h3 { /* Added h3 for consistency */
+    text-align: center;
+    color: #f0f0f0;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+/* General Input Styles */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="tel"], /* Added type="tel" here */
+input[type='date'],
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #333;
+    color: #fff;
+    box-sizing: border-box;
+}
+
+/* Filter Styles (Sales History Page) */
+.filters input[type="text"],
+.filters select,
+.filters input[type='date'] {
+    width: auto;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.filters label {
+    margin-right: 10px;
+}
+
+.filters button {
+    width: auto;
+    display: inline-block;
+    padding: 10px 15px; /* Slightly smaller padding for filter buttons */
+}
+
+/* General Button Styles */
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+/* Navigation Bar Styles */
+.nav-bar {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 10px;
+    width: 200px;
+    margin: 10px;
+    flex-shrink: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 1000;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #4CAF50 #333;
+}
+
+/* Webkit Scrollbar Styles (For Chrome, Safari) */
+.nav-bar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.nav-bar::-webkit-scrollbar-track {
+    background: #333;
+}
+
+.nav-bar::-webkit-scrollbar-thumb {
+    background-color: #4CAF50;
+    border-radius: 4px;
+}
+
+.nav-bar.show {
+    transform: translateX(0);
+}
+
+.nav-toggle {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 1001;
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 4px;
+    padding: 10px;
+    cursor: pointer;
+    width: auto;
+    color: white; /* Added text color for visibility */
+}
+
+.nav-toggle:hover {
+    background-color: #45a049;
+}
+
+.nav-bar a {
+    display: block;
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+    margin-bottom: 5px;
+    position: relative;
+}
+
+/* Neon Divider Style */
+.nav-bar a:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #4CAF50,
+        #4CAF50,
+        transparent
+    );
+    box-shadow:
+        0 0 5px #4CAF50,
+        0 0 10px #4CAF50,
+        0 0 15px #4CAF50;
+    animation: neonGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes neonGlow {
+    from {
+        opacity: 0.7;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.nav-bar a:hover {
+    background-color: #ddd;
+    color: black;
+}
+
+.nav-bar a.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+/* General Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 8px;
+    text-align: right;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.page-content {
+    flex-grow: 1;
+}
+
+/* Hide all pages initially except the login */
+#sales, #sales-history, #add-product, #returns, #receiving, #users, #main-menu, #expenses, #branches , #workshop , #item-movement{
+    display: none;
+}
+
+/* User List Button Styles */
+#user-list button { /* I take this selector, to add margin-left and padding */
+    background-color: red;
+    color: white;
+    margin-left: 10px; /* Add this to increase spacing*/
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Logout Button Styles */
+.logout-btn {
+    color: #fff;
+    background-color: #ff4444;
+    padding: 8px 15px; /* Removed conflicting padding */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+     width: 100%; /* Use the same style of button*/
+     text-align: center;/* Use the same style    text-decoration: none;/* Use the same style of button*/
+     display: block;        /* Use the same style of button*/
+       font-size: 16px;    /* Use the same style of button*/
+  }
+
+  .logout-btn:hover {
+      background-color: #ff6666;
+  }
+
+  /* Sales History Page Specific Styles */
+  #sales-history {
+      padding: 10px;
+  }
+  /* Wrapper for horizontal scrolling on smaller screens */
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    background:
+        linear-gradient(to right, #1e1e1e 30%, rgba(255, 255, 255, 0)),
+        linear-gradient(to right, rgba(255, 255, 255, 0), #1e1e1e 70%) 100% 0,
+        radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 100% 0;
+    background-repeat: no-repeat;
+    background-color: #1e1e1e;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-position: 0 0, 100% 0, 0 0, 100% 0;
+    background-attachment: local, local, scroll, scroll;
+}
+
+#sales-history {
+    width: 100%;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+#sales-history .container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+/* Filters Section */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+}
+
+.filters input[type="text"],
+.filters select,
+.filters input[type='date'] {
+    flex: 1 1 auto;
+    min-width: 150px;
+    max-width: 200px;
+    margin: 0;
+}
+
+.filters button {
+    flex: 0 0 auto;
+    min-width: 100px;
+}
+
+.filters label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+/* Sales History Table */
+#sales-table {
+    width: 100%;
+    min-width: 800px; /* Ensures table doesn't get too squeezed */
+    margin-bottom: 20px;
+}
+
+#sales-table th,
+#sales-table td {
+    padding: 12px 8px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+#sales-table th {
+    position: sticky;
+    top: 0;
+    background-color: #4CAF50;
+    z-index: 10;
+}
+
+/* --- Media Query for Tablets (up to 1024px) --- */
+@media screen and (max-width: 1024px) {
+    /* Make Sales History Page take full width */
+    #sales-history {
+        padding: 5px; /* Reduce padding slightly for tablet view */
+    }
+
+    #sales-history .container {
+        padding: 10px; /* Reduce container padding slightly */
+    }
+
+    #sales-table th,
+    #sales-table td {
+        padding: 8px 6px; /* Slightly reduced cell padding */
+        font-size: 12px; /* Optional: slightly smaller font */
+    }
+}
+
+
+/* Responsive Design Updates */
+@media screen and (max-width: 768px) {
+    .nav-bar {
+        width: 100%; /* Full width on small screens */
+        margin-right: 0;
+    }
+
+    .nav-bar a {
+        margin-bottom: 0;
+    }
+
+    .content-wrapper {
+        flex-direction: column;  /* Stack navigation and content vertically on small screens */
+    }
+
+    .container {
+        max-width: 100%;
+        margin: 5px auto;
+        padding: 10px;
+    }
+  #logo-image{
+    max-width:95%;
+  }
+
+    #sales-history {
+        padding: 10px;
+    }
+
+    #sales-history .container {
+        padding: 10px;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters input[type="text"],
+    .filters select,
+    .filters input[type='date'] {
+        max-width: 100%;
+    }
+
+    .filters button {
+        width: 100%;
+    }
+
+    .table-wrapper {
+        margin: 0 -10px;
+        width: calc(100% + 20px);
+        border-radius: 0;
+    }
+}
+
+/* Additional Mobile Optimizations */
+@media screen and (max-width: 480px) {
+    .filters input[type="text"],
+    .filters select,
+    .filters input[type='date'] {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    #sales-table th,
+    #sales-table td {
+        padding: 8px 6px;
+        font-size: 14px;
+    }
+}
+
+/* Target Table Styles (Sales Page) */
+#target-table {
+    width: 50%;
+    margin: 20px auto;
+    border-collapse: collapse;
+}
+
+#target-table th, #target-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+#target-table th {
+    background-color: #4CAF50;
+    color: white;
+}
+#target-table tr:nth-child(even) {
+ background-color: #252525;   /* Change from 'black' */
+}
+/* Logo Image Styles (Login Page) */
+#logo-image {
+    max-width: 80%; /* Adjust as needed */
+    height: auto;
+    display: block;
+    margin: 0 auto 20px;
+}
+
+/* products Table Styles (Add product Page) */
+ #products-table {
+     margin-top: 20px;
+   }
+
+
+/*Edit and Delete Buttons style*/
+.edit-btn,
+.delete-btn {
+    padding: 8px 16px;   /* Increased padding for better clickability */
+    font-size: 14px;
+    width: auto;
+    margin-right: 5px;
+    background-color: #007bff; /* A more modern blue */
+    color: white;
+    border: none;
+    border-radius: 4px; /* Rounded corners */
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Smooth transition on hover */
+}
+
+  .edit-btn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+  }
+
+  .delete-btn {
+    background-color: #dc3545; /* Red for delete */
+  }
+
+  .delete-btn:hover {
+    background-color: #c82333; /* Darker red on hover */
+  }
+/*Add Style the 'تصفير التارجت'*/
+#reset-target-container{
+    text-align: center;/*All center*/
+     margin-bottom: 20px;
+}
+.reset-target-btn{/*like all buttons */
+    width: auto;
+      margin: 0 auto;
+       padding: 5px 10px; /*make button smaller */
+    background-color: blue; /* Add style */
+}
+
+.admin-only {
+      display: none; /* Hide elements for regular users by default */
+ }
+
+
+#purchases-table { /* Added this to prevent break cells */
+    min-width: 100%; /* Ensure table takes at least full container width */
+    white-space: nowrap;  /* Prevent text wrapping */
+}
+#purchases-table th, #purchases-table td{ /*Added to prevent break cell */
+   min-width: 80px;
+    padding: 9px;
+}
+
+#expenses-table{
+ min-width: 100%;
+white-space: nowrap;
+}
+#expenses-table th, #expenses-table td {
+  min-width: 80px; /* Make the width small as need */
+   padding: 8px; /* To All Padding Consistents */
+}
+/* Workshop Table Styles */
+.workshop-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.workshop-table th, .workshop-table td {
+  padding: 8px;
+  text-align: right;
+  border-bottom: 1px solid #ddd;
+}
+
+.workshop-table th {
+  background-color: #4CAF50;
+  color: white;
+}
+.workshop-table tr:nth-child(even) {
+ background-color: #252525;   /* Change from 'black' */
+}
+/*style for Item Movement*/
+
+#item-movement-table{
+  min-width: 100%; /* Ensure at least full width*/
+  white-space: nowrap;  /* prevent wrapping cell*/
+
+}
+#item-movement-table th, #item-movement-table td{
+ min-width: 120px;
+ padding: 10px;
+}
+.separator{
+    margin: 20px 0; /* Top,and Bottom and, make space */
+     border: none;   /* Remove default Style */
+     border-top: 1px solid #4CAF50; /* color and style*/
+
+ }
+
+/* Returns Table Styles */
+#returns-table {
+    width: 100%;
+    min-width: 800px; /* Ensures table doesn't get too squeezed */
+    margin-bottom: 20px;
+}
+
+#returns-table th,
+#returns-table td {
+    padding: 12px 8px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+#returns-table th {
+    position: sticky;
+    top: 0;
+    background-color: #4CAF50;
+    z-index: 10;
+}
+
+/* Returns Page Specific Styles */
+#returns {
+    width: 100%;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+#returns .container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+/* Returns Filters Section */
+#returns .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+}
+
+#returns .filters input[type="text"],
+#returns .filters select,
+#returns .filters input[type='date'] {
+    flex: 1 1 auto;
+    min-width: 150px;
+    max-width: 200px;
+    margin: 0;
+}
+
+#returns .filters button {
+    flex: 0 0 auto;
+    min-width: 100px;
+}
+
+/* Responsive Design for Returns */
+@media screen and (max-width: 768px) {
+    #returns {
+        padding: 10px;
+    }
+
+    #returns .container {
+        padding: 10px;
+    }
+
+    #returns .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #returns .filters input[type="text"],
+    #returns .filters select,
+    #returns .filters input[type='date'] {
+        max-width: 100%;
+    }
+
+    #returns .filters button {
+        width: 100%;
+    }
+}
+
+/* Additional Mobile Optimizations for Returns */
+@media screen and (max-width: 480px) {
+    #returns .filters input[type="text"],
+    #returns .filters select,
+    #returns .filters input[type='date'] {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    #returns-table th,
+    #returns-table td {
+        padding: 8px 6px;
+        font-size: 14px;
+    }
+}
+
+.footer {
+    padding: 10px;
+    color: #ccc;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: auto;
+    background-color: #1e1e1e;
+    border-top: 1px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.9em;
+}
+
+#connection-status {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: red;
+    transition: background-color 0.5s ease, color 0.5s ease;
+    white-space: nowrap;
+}
+
+#connection-status.status-online {
+    background-color: #28a745;
+}
+
+#connection-status.status-offline {
+    background-color: #dc3545;
+}
+.footer span {
+    white-space: nowrap;
+}
+@media screen and (max-width: 480px) {
+    .footer {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        text-align: center;
+    }
+    #connection-status {
+        width: fit-content;
+    }
+}
