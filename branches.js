@@ -95,76 +95,81 @@ async function addBranch() {
         return;
     }
 
-    // Check for duplicate branch name
-    for (const id in branchMetadata) {
-        if (branchMetadata[id].name === branchName) {
-            Swal.fire('خطأ', 'هذا الفرع موجود بالفعل', 'error');
-            return;
-        }
-    }
-
     const selectedUsers = [];
     document.querySelectorAll('#branch-users-list input[type="checkbox"]:checked:not(:disabled)').forEach(checkbox => {
         selectedUsers.push(checkbox.value);
     });
 
-    if (selectedUsers.length === 0) {
-        Swal.fire('خطأ', 'يجب اختيار مستخدم واحد على الأقل (غير معين مسبقاً) لهذا الفرع.', 'error');
-        return;
-    }
-
-    // Generate a unique ID for the new branch
-    const newBranchId = database.ref('branchMetadata').push().key;
-
-    if (!newBranchId) {
-         Swal.fire('خطأ', 'فشل في إنشاء معرف فريد للفرع. يرجى المحاولة مرة أخرى.', 'error');
-         return;
-    }
-
-    // Update Branch Metadata
-    branchMetadata[newBranchId] = {
+    // إعداد بيانات الفرع للتحقق والإنشاء
+    const branchDataToCreate = {
         name: branchName,
         users: selectedUsers
     };
 
-    // Initialize Branch Data node
-    branchData[newBranchId] = {
-        products: [],
-        sales: [],
-        returns: [],
-        receiving: [],
-        expenses: [],
-        workshopOperations: []
-    };
-
     try {
-        // Save both metadata and the initialized data node
-        // Using update is safer than set('/') if other async operations might happen
-        await database.ref().update({
-            [`/branchMetadata/${newBranchId}`]: branchMetadata[newBranchId],
-            [`/branchData/${newBranchId}`]: branchData[newBranchId]
-        });
+        // التحقق من صحة البيانات محلياً
+        if (selectedUsers.length === 0) {
+            Swal.fire('خطأ', 'يجب اختيار مستخدم واحد على الأقل لهذا الفرع.', 'error');
+            return;
+        }
+
+        // التحقق من عدم تكرار اسم الفرع
+        const existingBranch = Object.values(branchMetadata).find(branch => branch.name === branchName);
+        if (existingBranch) {
+            Swal.fire('خطأ', 'اسم الفرع موجود بالفعل', 'error');
+            return;
+        }
+
+        // إنشاء الفرع باستخدام النظام المحسن إذا كان متاحاً، وإلا استخدم الطريقة التقليدية
+        if (dbManager && typeof dbManager.createBranch === 'function') {
+            const branchId = await dbManager.createBranch(branchDataToCreate);
+        } else {
+            // الطريقة التقليدية
+            const newBranchId = database.ref('branchMetadata').push().key;
+
+            branchMetadata[newBranchId] = {
+                name: branchName,
+                users: selectedUsers,
+                createdAt: new Date().toISOString(),
+                isActive: true
+            };
+
+            branchData[newBranchId] = {
+                products: [],
+                sales: [],
+                returns: [],
+                receiving: [],
+                expenses: [],
+                workshopOperations: [],
+                lastUpdated: new Date().toISOString()
+            };
+
+            await database.ref().update({
+                [`/branchMetadata/${newBranchId}`]: branchMetadata[newBranchId],
+                [`/branchData/${newBranchId}`]: branchData[newBranchId]
+            });
+        }
 
         // Clear the form
         branchNameInput.value = '';
         document.querySelectorAll('#branch-users-list input[type="checkbox"]').forEach(checkbox => {
             checkbox.checked = false;
-            // Re-enable checkboxes if they were disabled after selection (might not be necessary depending on flow)
         });
 
         // Dispatch event to refresh UI
         document.dispatchEvent(new CustomEvent('branchAdded'));
 
         Swal.fire({
-            title: 'تم', text: 'تم إضافة الفرع بنجاح', icon: 'success',
-            timer: 1500, showConfirmButton: false
+            title: 'تم',
+            text: 'تم إضافة الفرع بنجاح',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
         });
 
     } catch (error) {
-         handleError(error, "خطأ أثناء إضافة الفرع");
-         // Clean up local state if save failed? Revert branchMetadata/branchData changes?
-         delete branchMetadata[newBranchId];
-         delete branchData[newBranchId];
+        console.error('خطأ في إضافة الفرع:', error);
+        Swal.fire('خطأ', error.message || 'حدث خطأ أثناء إضافة الفرع', 'error');
     }
 }
 

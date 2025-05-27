@@ -714,6 +714,39 @@ white-space: nowrap;
 .footer span {
     white-space: nowrap;
 }
+
+/* مؤشر سلامة قاعدة البيانات */
+.health-indicator {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 20px;
+    text-align: center;
+}
+
+.health-indicator.healthy {
+    background-color: #4CAF50;
+    color: white;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+.health-indicator.unhealthy {
+    background-color: #ff9800;
+    color: white;
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
 @media screen and (max-width: 480px) {
     .footer {
         flex-direction: column;

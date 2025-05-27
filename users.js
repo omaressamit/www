@@ -5,27 +5,52 @@ async function addUser() {
         Swal.fire('خطأ', 'يجب تسجيل الدخول كمسؤول لإضافة مستخدم', 'error');
         return;
     }
+
     const username = document.getElementById('new-username').value.trim();
     const password = document.getElementById('new-password').value.trim();
     const role = document.getElementById('new-user-role').value;
 
-    if (!username || !password) {
-        Swal.fire('خطأ', 'يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
-        return;
-    }
-
-    // Check if the username already exists in the global users list
-    if (users.some(u => u.username === username)) {
-        Swal.fire('خطأ', 'اسم المستخدم موجود بالفعل', 'error');
-        return;
-    }
-
-    // Add new user to the global list
-    users.push({ username, password, role });
+    // إعداد بيانات المستخدم للتحقق والإنشاء
+    const userData = {
+        username: username,
+        password: password,
+        role: role
+    };
 
     try {
-        // Save the entire users list
-        await database.ref('/users').set(users);
+        // التحقق من صحة البيانات محلياً
+        if (!username || !password) {
+            Swal.fire('خطأ', 'يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            Swal.fire('خطأ', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+            return;
+        }
+
+        // التحقق من عدم تكرار اسم المستخدم
+        if (users.some(u => u.username === username)) {
+            Swal.fire('خطأ', 'اسم المستخدم موجود بالفعل', 'error');
+            return;
+        }
+
+        // إنشاء المستخدم باستخدام النظام المحسن إذا كان متاحاً، وإلا استخدم الطريقة التقليدية
+        if (dbManager && typeof dbManager.createUser === 'function') {
+            const userId = await dbManager.createUser(userData);
+        } else {
+            // الطريقة التقليدية
+            const newUser = {
+                username: username,
+                password: password, // سيتم تشفيرها لاحقاً
+                role: role,
+                createdAt: new Date().toISOString(),
+                isActive: true
+            };
+
+            users.push(newUser);
+            await database.ref('/users').set(users);
+        }
 
         // Clear form
         document.getElementById('new-username').value = '';
@@ -36,14 +61,16 @@ async function addUser() {
         document.dispatchEvent(new CustomEvent('userAdded'));
 
         Swal.fire({
-            title: 'تم', text: 'تم إضافة المستخدم بنجاح', icon: 'success',
-            timer: 1500, showConfirmButton: false
+            title: 'تم',
+            text: 'تم إضافة المستخدم بنجاح',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
         });
+
     } catch (error) {
-        handleError(error, "خطأ أثناء إضافة المستخدم");
-        // Revert local change if save failed
-        users.pop(); // Remove the locally added user
-        document.dispatchEvent(new CustomEvent('userAdded')); // Refresh list to show reverted state
+        console.error('خطأ في إضافة المستخدم:', error);
+        Swal.fire('خطأ', error.message || 'حدث خطأ أثناء إضافة المستخدم', 'error');
     }
 }
 

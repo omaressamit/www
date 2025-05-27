@@ -42,19 +42,50 @@ async function addProduct() {
     const { value: productDetails } = await Swal.fire({
         title: `إضافة صنف جديد إلى فرع "${branchName}"`,
         html:
-            `<input id="swal-input1" class="swal2-input" placeholder="الكمية الأولية (بالجرام)" type="number" step="0.01">` +
-            `<input id="swal-input2" class="swal2-input" placeholder="إجمالي سعر الشراء للكمية المدخلة" type="number" step="0.01">`, // Changed placeholder
+            `<label for="swal-input1" style="display: block; text-align: right; margin-bottom: 5px; font-weight: bold;">الكمية الأولية (بالجرام):</label>` +
+            `<input id="swal-input1" class="swal2-input" placeholder="الكمية بالجرام" type="number" step="0.01">` +
+            `<label for="swal-input2" style="display: block; text-align: right; margin-bottom: 5px; margin-top: 15px; font-weight: bold;">سعر الشراء للجرام الواحد:</label>` +
+            `<input id="swal-input2" class="swal2-input" placeholder="سعر الجرام الواحد" type="number" step="0.01">` +
+            `<div id="total-cost-display" style="margin-top: 15px; padding: 10px; background-color: #f0f8ff; border-radius: 5px; text-align: center; font-weight: bold; color: #2c5aa0;"></div>`,
         focusConfirm: false,
+        didOpen: () => {
+            // إضافة مستمع للأحداث لحساب التكلفة الإجمالية تلقائياً
+            const quantityInput = document.getElementById('swal-input1');
+            const pricePerGramInput = document.getElementById('swal-input2');
+            const totalCostDisplay = document.getElementById('total-cost-display');
+
+            function updateTotalCost() {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const pricePerGram = parseFloat(pricePerGramInput.value) || 0;
+                const totalCost = quantity * pricePerGram;
+
+                if (quantity > 0 && pricePerGram > 0) {
+                    totalCostDisplay.innerHTML = `إجمالي التكلفة: <span style="color: #d32f2f;">${totalCost.toFixed(2)} جنيه</span>`;
+                } else {
+                    totalCostDisplay.innerHTML = 'أدخل الكمية وسعر الجرام لحساب التكلفة الإجمالية';
+                }
+            }
+
+            quantityInput.addEventListener('input', updateTotalCost);
+            pricePerGramInput.addEventListener('input', updateTotalCost);
+            updateTotalCost(); // حساب أولي
+        },
         preConfirm: () => {
             const quantity = parseFloat(document.getElementById('swal-input1').value);
-            // IMPORTANT: Input 2 is now TOTAL purchase price for the initial quantity
-            const totalPurchasePrice = parseFloat(document.getElementById('swal-input2').value);
+            const pricePerGram = parseFloat(document.getElementById('swal-input2').value);
 
-            if (isNaN(quantity) || quantity <= 0 || isNaN(totalPurchasePrice) || totalPurchasePrice < 0) { // Allow 0 price?
-                Swal.showValidationMessage('يرجى إدخال قيم صحيحة وموجبة للكمية وسعر الشراء الإجمالي (يمكن أن يكون السعر صفراً).');
-                return false; // prevent confirmation
+            if (isNaN(quantity) || quantity <= 0) {
+                Swal.showValidationMessage('يرجى إدخال كمية صحيحة (أكبر من صفر)');
+                return false;
             }
-            return { quantity, totalPurchasePrice };
+            if (isNaN(pricePerGram) || pricePerGram <= 0) {
+                Swal.showValidationMessage('يرجى إدخال سعر صحيح للجرام (أكبر من صفر)');
+                return false;
+            }
+
+            // حساب التكلفة الإجمالية
+            const totalPurchasePrice = quantity * pricePerGram;
+            return { quantity, pricePerGram, totalPurchasePrice };
         }
     });
 
@@ -143,11 +174,12 @@ function updateProductsTable() {
 
         thead.innerHTML = `
               <tr>
-                  <th colspan="4" style="text-align: center; background-color: #4CAF50; color: white;">${branchMeta.name}</th>
+                  <th colspan="5" style="text-align: center; background-color: #4CAF50; color: white;">${branchMeta.name}</th>
               </tr>
               <tr>
                   <th>اسم الصنف</th>
                   <th>الكمية (جرام)</th>
+                  <th>سعر الجرام</th>
                   <th>إجمالي سعر الشراء</th>
                   ${currentUser.role === 'admin' ? '<th></th>' : ''} <!-- Actions column only for admin -->
               </tr>
@@ -161,7 +193,7 @@ function updateProductsTable() {
         if (products.length === 0) {
             const row = tbody.insertRow();
             const cell = row.insertCell();
-            cell.colSpan = currentUser.role === 'admin' ? 4 : 3; // Adjust colspan
+            cell.colSpan = currentUser.role === 'admin' ? 5 : 4; // Adjust colspan for new column
             cell.textContent = 'لا توجد أصناف في هذا الفرع.';
             cell.style.textAlign = 'center';
             return; // Skip to the next branch
@@ -173,9 +205,16 @@ function updateProductsTable() {
 
         products.forEach((product, index) => {
             const row = tbody.insertRow();
+
+            // حساب سعر الجرام الواحد
+            const pricePerGram = (product.quantity > 0 && product.purchasePrice > 0)
+                ? (product.purchasePrice / product.quantity)
+                : 0;
+
             row.innerHTML = `
                   <td>${product.name}</td>
                   <td>${product.quantity?.toFixed(2) || '0.00'}</td>
+                  <td>${pricePerGram.toFixed(2)}</td>
                   <td>${product.purchasePrice?.toFixed(2) || '0.00'}</td>
               `;
 
@@ -218,6 +257,11 @@ async function editProduct(branchId, productIndex) {
     const product = branchData[branchId].products[productIndex];
     const branchName = getBranchNameById(branchId) || `فرع غير معروف (${branchId})`;
 
+    // حساب سعر الجرام الحالي
+    const currentPricePerGram = (product.quantity > 0 && product.purchasePrice > 0)
+        ? (product.purchasePrice / product.quantity)
+        : 0;
+
     const { value: updatedDetails } = await Swal.fire({
         title: `تعديل الصنف "${product.name}"`,
         html:
@@ -226,13 +270,36 @@ async function editProduct(branchId, productIndex) {
             `<input id="swal-input-name" class="swal2-input" value="${product.name}">` + // Allow editing name
             `<label for="swal-input-qty" style="display: block; text-align: right; margin-top: 10px;">الكمية الحالية (بالجرام):</label>` +
             `<input id="swal-input-qty" class="swal2-input" placeholder="الكمية (بالجرام)" type="number" step="0.01" value="${product.quantity}">` +
-            `<label for="swal-input-price" style="display: block; text-align: right; margin-top: 10px;">إجمالي سعر الشراء الحالي:</label>` +
-            `<input id="swal-input-price" class="swal2-input" placeholder="إجمالي سعر الشراء" type="number" step="0.01" value="${product.purchasePrice}">`,
+            `<label for="swal-input-price-per-gram" style="display: block; text-align: right; margin-top: 10px;">سعر الجرام الواحد:</label>` +
+            `<input id="swal-input-price-per-gram" class="swal2-input" placeholder="سعر الجرام" type="number" step="0.01" value="${currentPricePerGram.toFixed(2)}">` +
+            `<div id="edit-total-cost-display" style="margin-top: 15px; padding: 10px; background-color: #f0f8ff; border-radius: 5px; text-align: center; font-weight: bold; color: #2c5aa0;"></div>`,
         focusConfirm: false,
+        didOpen: () => {
+            // إضافة مستمع للأحداث لحساب التكلفة الإجمالية تلقائياً في التعديل
+            const quantityInput = document.getElementById('swal-input-qty');
+            const pricePerGramInput = document.getElementById('swal-input-price-per-gram');
+            const totalCostDisplay = document.getElementById('edit-total-cost-display');
+
+            function updateEditTotalCost() {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const pricePerGram = parseFloat(pricePerGramInput.value) || 0;
+                const totalCost = quantity * pricePerGram;
+
+                if (quantity > 0 && pricePerGram > 0) {
+                    totalCostDisplay.innerHTML = `إجمالي التكلفة الجديدة: <span style="color: #d32f2f;">${totalCost.toFixed(2)} جنيه</span>`;
+                } else {
+                    totalCostDisplay.innerHTML = 'أدخل الكمية وسعر الجرام لحساب التكلفة الإجمالية';
+                }
+            }
+
+            quantityInput.addEventListener('input', updateEditTotalCost);
+            pricePerGramInput.addEventListener('input', updateEditTotalCost);
+            updateEditTotalCost(); // حساب أولي
+        },
         preConfirm: () => {
             const name = document.getElementById('swal-input-name').value.trim();
             const quantity = parseFloat(document.getElementById('swal-input-qty').value);
-            const purchasePrice = parseFloat(document.getElementById('swal-input-price').value);
+            const pricePerGram = parseFloat(document.getElementById('swal-input-price-per-gram').value);
 
              if (!name) {
                 Swal.showValidationMessage('يرجى إدخال اسم الصنف.');
@@ -244,12 +311,19 @@ async function editProduct(branchId, productIndex) {
                  return false;
             }
 
-            // Validate numbers (allow zero quantity and price?)
-            if (isNaN(quantity) || quantity < 0 || isNaN(purchasePrice) || purchasePrice < 0) {
-                Swal.showValidationMessage('يرجى إدخال قيم رقمية صحيحة (غير سالبة) للكمية والسعر');
+            // Validate numbers
+            if (isNaN(quantity) || quantity < 0) {
+                Swal.showValidationMessage('يرجى إدخال كمية صحيحة (غير سالبة)');
                 return false;
             }
-            return { name, quantity, purchasePrice };
+            if (isNaN(pricePerGram) || pricePerGram < 0) {
+                Swal.showValidationMessage('يرجى إدخال سعر صحيح للجرام (غير سالب)');
+                return false;
+            }
+
+            // حساب التكلفة الإجمالية الجديدة
+            const purchasePrice = quantity * pricePerGram;
+            return { name, quantity, pricePerGram, purchasePrice };
         }
     });
 

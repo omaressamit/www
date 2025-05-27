@@ -1,0 +1,232 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+
+    "users": {
+      ".indexOn": ["username", "role", "isActive"],
+      "$userId": {
+        ".validate": "newData.hasChildren(['username', 'password', 'role', 'createdAt', 'isActive'])",
+        "username": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "password": {
+          ".validate": "newData.isString() && newData.val().length >= 6"
+        },
+        "role": {
+          ".validate": "newData.val() == 'admin' || newData.val() == 'user'"
+        },
+        "isActive": {
+          ".validate": "newData.isBoolean()"
+        },
+        "createdAt": {
+          ".validate": "newData.isString()"
+        },
+        "createdBy": {
+          ".validate": "newData.isString()"
+        },
+        "lastLogin": {
+          ".validate": "newData.isString() || newData.val() == null"
+        }
+      }
+    },
+
+    "branchMetadata": {
+      ".indexOn": ["name", "isActive", "createdAt"],
+      "$branchId": {
+        ".validate": "newData.hasChildren(['name', 'users', 'createdAt', 'isActive'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "users": {
+          ".validate": "newData.hasChildren()",
+          "$userIndex": {
+            ".validate": "newData.isString()"
+          }
+        },
+        "isActive": {
+          ".validate": "newData.isBoolean()"
+        },
+        "createdAt": {
+          ".validate": "newData.isString()"
+        },
+        "createdBy": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+
+    "branchData": {
+      "$branchId": {
+        ".indexOn": ["lastUpdated"],
+        ".validate": "newData.hasChildren(['products', 'sales', 'returns', 'receiving', 'expenses', 'workshopOperations'])",
+
+        "products": {
+          ".indexOn": ["name", "quantity"],
+          "$productIndex": {
+            ".validate": "newData.hasChildren(['name', 'quantity', 'purchasePrice'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "quantity": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "purchasePrice": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            }
+          }
+        },
+
+        "sales": {
+          ".indexOn": ["date", "user", "productName"],
+          "$saleIndex": {
+            ".validate": "newData.hasChildren(['date', 'productName', 'quantity', 'price', 'user'])",
+            "date": {
+              ".validate": "newData.isString()"
+            },
+            "productName": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "quantity": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "price": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            }
+          }
+        },
+
+        "returns": {
+          ".indexOn": ["date", "user", "productName"],
+          "$returnIndex": {
+            ".validate": "newData.hasChildren(['date', 'productName', 'quantity', 'reason', 'user'])",
+            "date": {
+              ".validate": "newData.isString()"
+            },
+            "productName": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "quantity": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "reason": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            }
+          }
+        },
+
+        "receiving": {
+          ".indexOn": ["date", "user", "productName"],
+          "$receivingIndex": {
+            ".validate": "newData.hasChildren(['date', 'productName', 'quantity', 'totalCost', 'user'])",
+            "date": {
+              ".validate": "newData.isString()"
+            },
+            "productName": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "quantity": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "totalCost": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            }
+          }
+        },
+
+        "expenses": {
+          ".indexOn": ["date", "user", "expenseType"],
+          "$expenseIndex": {
+            ".validate": "newData.hasChildren(['date', 'expenseType', 'amount', 'user'])",
+            "date": {
+              ".validate": "newData.isString()"
+            },
+            "expenseType": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "amount": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "description": {
+              ".validate": "newData.isString()"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            }
+          }
+        },
+
+        "workshopOperations": {
+          ".indexOn": ["date", "user", "operationType"],
+          "$operationIndex": {
+            ".validate": "newData.hasChildren(['date', 'operationType', 'price', 'user'])",
+            "date": {
+              ".validate": "newData.isString()"
+            },
+            "operationType": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "price": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "description": {
+              ".validate": "newData.isString()"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            }
+          }
+        },
+
+        "lastUpdated": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+
+    "auditLog": {
+      ".indexOn": ["timestamp", "userId", "action"],
+      "$auditId": {
+        ".validate": "newData.hasChildren(['timestamp', 'action', 'userId'])",
+        "timestamp": {
+          ".validate": "newData.isString()"
+        },
+        "action": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "userId": {
+          ".validate": "newData.isString()"
+        },
+        "details": {
+          ".validate": "newData.hasChildren()"
+        }
+      }
+    },
+
+    "systemConfig": {
+      ".validate": "auth != null",
+      "schemaVersion": {
+        ".validate": "newData.isString()"
+      },
+      "maintenanceMode": {
+        ".validate": "newData.isBoolean()"
+      },
+      "lastBackup": {
+        ".validate": "newData.isString()"
+      }
+    },
+
+    "schemaVersion": {
+      ".validate": "newData.isString()"
+    }
+  }
+}

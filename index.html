@@ -524,11 +524,19 @@
 
     <div class="footer">
         <div id="connection-status">غير متصل</div>
+        <div id="database-health-indicator" class="health-indicator healthy" title="قاعدة البيانات سليمة">●</div>
         <span>EAGLE.CO FOR SOFTWARE DEVELOPMENT ©</span>
     </div>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="lib/js/sweetalert2.min.js"></script>
+
+    <!-- Database Management Scripts -->
+    <script src="dataValidator.js"></script>
+    <script src="databaseManager.js"></script>
+    <script src="backupManager.js"></script>
+    <script src="databaseMonitor.js"></script>
+
     <script src="main.js"></script>
     <script src="sales.js"></script>
     <script src="salesHistory.js"></script>

@@ -8,6 +8,37 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
+// Database Schema Version for migration tracking
+const DB_SCHEMA_VERSION = "2.0";
+
+// Database Structure Constants
+const DB_PATHS = {
+    USERS: '/users',
+    BRANCH_METADATA: '/branchMetadata',
+    BRANCH_DATA: '/branchData',
+    SYSTEM_CONFIG: '/systemConfig',
+    AUDIT_LOG: '/auditLog',
+    SCHEMA_VERSION: '/schemaVersion'
+};
+
+// تهيئة مديري قاعدة البيانات بعد تحميل Firebase
+function initializeDatabaseManagers() {
+    // تهيئة مدير قاعدة البيانات
+    if (typeof DatabaseManager !== 'undefined') {
+        dbManager = new DatabaseManager(database);
+    }
+
+    // تهيئة مدير النسخ الاحتياطي
+    if (typeof BackupManager !== 'undefined') {
+        backupManager = new BackupManager(database);
+    }
+
+    // تهيئة مراقب قاعدة البيانات
+    if (typeof DatabaseMonitor !== 'undefined' && typeof DataValidator !== 'undefined') {
+        databaseMonitor = new DatabaseMonitor(database, dataValidator);
+    }
+}
+
 // Global Variables - NEW STRUCTURE
 let users = [];
 let branchMetadata = {}; // Key: branchId, Value: { name: "...", users: ["..."] }
@@ -31,6 +62,9 @@ function getBranchNameById(branchId) {
 
 // Check for remembered login on page load
 window.onload = async function () {
+    // تهيئة مديري قاعدة البيانات أولاً
+    initializeDatabaseManagers();
+
     await loadData();  // Load data first
 
     // Remember Me Logic (remains largely the same, checks against global 'users')

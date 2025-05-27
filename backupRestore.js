@@ -16,38 +16,70 @@ async function backupData() {
     if (!isConfirmed) return;
 
     // Loading indicator
-    Swal.fire({ title: 'جاري إنشاء النسخة الاحتياطية...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({
+        title: 'جاري إنشاء النسخة الاحتياطية المحسنة...',
+        text: 'يتم ضغط وتشفير البيانات...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
 
     try {
-        // Fetch the entire database root
-        const snapshot = await database.ref('/').once('value');
-        const data = snapshot.val();
+        // استخدام النظام المحسن إذا كان متاحاً، وإلا استخدم الطريقة التقليدية
+        if (backupManager && typeof backupManager.createFullBackup === 'function') {
+            const backupData = await backupManager.createFullBackup();
 
-        if (!data) {
-            Swal.fire('فارغة', 'قاعدة البيانات فارغة، لا يوجد شيء لنسخه.', 'info');
-            return;
+            // تنزيل النسخة الاحتياطية
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `mrfeadda-enhanced-backup-${timestamp}.json`;
+            backupManager.downloadBackup(backupData, filename);
+
+            Swal.fire({
+                title: 'تم',
+                html: `
+                    <p>تم إنشاء النسخة الاحتياطية المحسنة بنجاح</p>
+                    <p><strong>معرف النسخة:</strong> ${backupData.info.id}</p>
+                    <p><strong>الحجم الأصلي:</strong> ${backupManager.formatBytes(backupData.info.originalSize)}</p>
+                    ${backupData.info.compressed ? `<p><strong>الحجم المضغوط:</strong> ${backupManager.formatBytes(backupData.info.compressedSize)}</p>` : ''}
+                    <p><strong>مشفرة:</strong> ${backupData.info.encrypted ? 'نعم' : 'لا'}</p>
+                `,
+                icon: 'success',
+                timer: 5000,
+                showConfirmButton: true
+            });
+        } else {
+            // الطريقة التقليدية
+            const snapshot = await database.ref('/').once('value');
+            const data = snapshot.val();
+
+            if (!data) {
+                Swal.fire('فارغة', 'قاعدة البيانات فارغة، لا يوجد شيء لنسخه.', 'info');
+                return;
+            }
+
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            a.download = `mrfeadda-backup-${timestamp}.json`;
+
+            document.body.appendChild(a);
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            Swal.fire({
+                title: 'تم',
+                text: 'تم تنزيل النسخة الاحتياطية بنجاح!',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
         }
-
-        // Ensure the structure includes the new format (or whatever is currently in DB)
-        // No structural change needed here as we backup the whole root
-        const jsonData = JSON.stringify(data, null, 2); // Pretty print
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        a.download = `mrfeadda-backup-${timestamp}.json`; // Consistent naming
-
-        document.body.appendChild(a);
-        a.click();
-
-        // Clean up
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
-        Swal.fire({ title: 'تم', text: 'تم تنزيل النسخة الاحتياطية بنجاح!', icon: 'success', timer: 2000, showConfirmButton: false });
 
     } catch (error) {
         console.error("Error creating backup:", error);
@@ -124,45 +156,63 @@ async function handleRestoreFile(event) {
     reader.onload = async (e) => {
         try {
             const fileContent = e.target.result;
-            const dataToRestore = JSON.parse(fileContent);
+            const backupData = JSON.parse(fileContent);
 
-            // *** VALIDATION for NEW STRUCTURE ***
-            if (!dataToRestore || typeof dataToRestore !== 'object') {
-                throw new Error("ملف النسخة الاحتياطية غير صالح أو فارغ.");
+            // استخدام النظام المحسن إذا كان متاحاً، وإلا استخدم الطريقة التقليدية
+            if (backupManager && typeof backupManager.restoreFromBackup === 'function') {
+                const success = await backupManager.restoreFromBackup(backupData, {
+                    skipCurrentBackup: false // إنشاء نسخة احتياطية من البيانات الحالية قبل الاستعادة
+                });
+
+                if (success) {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        html: `
+                            <p>تم استعادة البيانات بنجاح</p>
+                            <p><strong>معرف النسخة المستعادة:</strong> ${backupData.info?.id || 'غير محدد'}</p>
+                            <p><strong>تاريخ النسخة:</strong> ${backupData.info?.timestamp ? new Date(backupData.info.timestamp).toLocaleString('ar') : 'غير محدد'}</p>
+                            <p><strong>نوع النسخة:</strong> ${backupData.info?.type === 'full' ? 'كاملة' : 'تدريجية'}</p>
+                        `,
+                        icon: 'success',
+                        timer: 5000,
+                        showConfirmButton: true
+                    });
+                }
+            } else {
+                // الطريقة التقليدية
+                if (!backupData || typeof backupData !== 'object') {
+                    throw new Error("ملف النسخة الاحتياطية غير صالح أو فارغ.");
+                }
+
+                // التحقق من البنية الأساسية
+                const hasUsers = backupData.hasOwnProperty('users') && Array.isArray(backupData.users);
+                const hasMetadata = backupData.hasOwnProperty('branchMetadata') && typeof backupData.branchMetadata === 'object';
+                const hasData = backupData.hasOwnProperty('branchData') && typeof backupData.branchData === 'object';
+
+                if (!hasUsers || !hasMetadata || !hasData) {
+                    throw new Error("ملف النسخة الاحتياطية لا يحتوي على الهيكل المتوقع.");
+                }
+
+                // استعادة البيانات
+                await database.ref('/').set(backupData);
+                await loadData();
+
+                Swal.fire({
+                    title: 'تم بنجاح!',
+                    text: 'تم استعادة البيانات بنجاح.',
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: true
+                });
             }
-            // Check for essential top-level keys of the new structure
-            const hasUsers = dataToRestore.hasOwnProperty('users') && Array.isArray(dataToRestore.users);
-            const hasMetadata = dataToRestore.hasOwnProperty('branchMetadata') && typeof dataToRestore.branchMetadata === 'object';
-            const hasData = dataToRestore.hasOwnProperty('branchData') && typeof dataToRestore.branchData === 'object';
-
-            if (!hasUsers || !hasMetadata || !hasData) {
-                 console.error("Validation failed. Missing keys:", {hasUsers, hasMetadata, hasData});
-                 throw new Error("ملف النسخة الاحتياطية لا يحتوي على الهيكل المتوقع (users, branchMetadata, branchData).");
-            }
-             // Optional: Deeper validation (e.g., check format within branchData) can be added here.
-
-
-            // The core restore operation: OVERWRITE EVERYTHING at the root
-            await database.ref('/').set(dataToRestore);
-
-            // IMPORTANT: Reload data into the application's memory *immediately*
-            await loadData(); // loadData now handles the new structure
-
-            // Refresh UI elements based on the newly loaded data
-            // refreshAllPagesData(); // Call the function from refresh.js - This is now handled by loadData calling showPage
-
-            Swal.fire({
-                title: 'تم بنجاح!', text: 'تم استعادة البيانات بنجاح.', icon: 'success',
-                timer: 3000, showConfirmButton: true
-            });
 
         } catch (error) {
             console.error("Error during restore:", error);
             let errorMsg = 'حدث خطأ أثناء استعادة البيانات.';
             if (error instanceof SyntaxError) {
                 errorMsg = 'خطأ في تحليل ملف JSON. تأكد من أن الملف صالح.';
-            } else if (error.message.includes("الهيكل المتوقع") || error.message.includes("غير صالح")) {
-                errorMsg = error.message; // Use the specific validation error message
+            } else {
+                errorMsg = error.message;
             }
             // Use the central error handler
             handleError(new Error(errorMsg), 'فشل الاستعادة');
