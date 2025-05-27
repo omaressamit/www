@@ -2,6 +2,16 @@
 
 let lastSaleClickTime = 0; // Initialize timestamp
 
+// Sets today's date as default in the sale date field
+function setDefaultSaleDate() {
+    const saleDateInput = document.getElementById('sale-date');
+    if (saleDateInput) {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        saleDateInput.value = formattedDate;
+    }
+}
+
 async function recordSale() {
     if (!currentUser) {
         Swal.fire('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
@@ -16,6 +26,7 @@ async function recordSale() {
     }
 
     const branchName = document.getElementById('branch-select').value;
+    const saleDate = document.getElementById('sale-date').value;
     const productName = document.getElementById('product-select').value.trim();
     const saleQuantity = parseFloat(document.getElementById('sale-quantity').value.trim());
     const salePrice = parseFloat(document.getElementById('sale-price').value.trim()); // Total sale price
@@ -31,8 +42,12 @@ async function recordSale() {
         Swal.fire('خطأ', 'يرجى اختيار فرع صحيح.', 'error');
         return;
     }
+    if (!saleDate) {
+        Swal.fire('خطأ', 'يرجى اختيار تاريخ البيع.', 'error');
+        return;
+    }
     if (!productName || !paymentMethod || isNaN(saleQuantity) || isNaN(salePrice)) {
-        Swal.fire('خطأ', 'يرجى إدخال جميع الحقول المطلوبة (الفرع، الصنف، الكمية، السعر، وسيلة الدفع) بقيم صحيحة.', 'error');
+        Swal.fire('خطأ', 'يرجى إدخال جميع الحقول المطلوبة (الفرع، التاريخ، الصنف، الكمية، السعر، وسيلة الدفع) بقيم صحيحة.', 'error');
         return;
     }
     if (saleQuantity <= 0) {
@@ -91,9 +106,15 @@ async function recordSale() {
     // --- End Inventory Update ---
 
 
+    // Create date object from selected date and current time
+    const selectedDate = new Date(saleDate);
+    const currentTime = new Date();
+    // Set the time to current time but keep the selected date
+    selectedDate.setHours(currentTime.getHours(), currentTime.getMinutes(), currentTime.getSeconds(), currentTime.getMilliseconds());
+
     // Add record to the specific branch's sales list
     const newSaleRecord = {
-        date: new Date().toISOString(),
+        date: selectedDate.toISOString(),
         product: productName,
         quantity: saleQuantity,
         price: salePrice, // Total sale price
@@ -117,6 +138,7 @@ async function recordSale() {
         });
 
         // Clear form fields
+        document.getElementById('sale-date').value = '';
         document.getElementById('sale-quantity').value = '';
         document.getElementById('sale-price').value = '';
         document.getElementById('customer-phone').value = '';

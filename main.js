@@ -173,16 +173,28 @@ window.onload = async function () {
      if (expenseBranchSelect) {
          expenseBranchSelect.addEventListener('change', updateExpenseForm);
      }
-     // Add Event Listener to update employee dropdown when sales branch changes
+     // Add Event Listener to update employee dropdown and product select when sales branch changes
      const salesBranchSelect = document.getElementById('branch-select');
      if (salesBranchSelect) {
-         salesBranchSelect.addEventListener('change', populateBranchEmployeeSelect);
+         salesBranchSelect.addEventListener('change', function() {
+             populateBranchEmployeeSelect(); // Update employee dropdown
+             populateProductSelect('sales', this.value); // Update product select
+             updateDailySalesTable(); // Update daily sales table for the new branch
+         });
      }
 
      // Add event listeners for Item Movement page dropdowns
      const itemMoveBranchSelect = document.getElementById('item-movement-branch-select');
      if(itemMoveBranchSelect) {
         itemMoveBranchSelect.addEventListener('change', updateItemMovementProductSelect);
+     }
+
+     // Add Event Listener to update product select when returns branch changes
+     const returnsBranchSelect = document.getElementById('returns-branch-select');
+     if (returnsBranchSelect) {
+         returnsBranchSelect.addEventListener('change', function() {
+             populateProductSelect('returns', this.value); // Update product select for returns
+         });
      }
 
 
@@ -283,6 +295,7 @@ function showPage(pageId) {
         updateTargetDisplay(); // Update target (may need branch context)
         updateDailySalesTable(); // Update daily sales (may need branch context)
         populateBranchEmployeeSelect(); // Populate employee dropdown for selected branch
+        setDefaultSaleDate(); // Set today's date as default
     } else if (pageId === 'expenses') {
         updateExpensesPage(); // Updates dropdowns and form visibility
         // Don't show history automatically
