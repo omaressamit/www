@@ -107,6 +107,7 @@ async function updateUsersList() {
         row.insertCell(1).textContent = user.role === 'admin' ? 'مسؤول' : 'مستخدم';
 
         // Calculate total sales (target) for this user across ALL branches
+        // Note: Workshop operations are excluded from employee targets
         let totalSalesValue = 0;
         for (const branchId in branchData) {
             const salesList = branchData[branchId]?.sales || [];
@@ -115,13 +116,13 @@ async function updateUsersList() {
                     totalSalesValue += parseFloat(sale.price || 0);
                 }
             });
-             // Include workshop operations in target calculation
-             const workshopList = branchData[branchId]?.workshopOperations || [];
-             workshopList.forEach(op => {
-                 if (op.user === user.username) {
-                     totalSalesValue += parseFloat(op.price || 0);
-                 }
-             });
+             // Workshop operations are excluded from employee targets
+             // const workshopList = branchData[branchId]?.workshopOperations || [];
+             // workshopList.forEach(op => {
+             //     if (op.user === user.username) {
+             //         totalSalesValue += parseFloat(op.price || 0);
+             //     }
+             // });
         }
         row.insertCell(2).textContent = totalSalesValue.toFixed(2); // Display target/total sales
 
@@ -166,7 +167,7 @@ async function updateUsersList() {
         tableHeaderRow.innerHTML = `
             <th>اسم المستخدم</th>
             <th>نوع المستخدم</th>
-            <th>التارجت/إجمالي المبيعات</th>
+            <th>إجمالي المبيعات</th>
             <th>الإجراءات</th>
         `;
     }
@@ -262,7 +263,7 @@ async function resetUserTarget(usernameToReset) {
 
     const confirmResult = await Swal.fire({
         title: `تأكيد تصفير التارجت`,
-        text: `سيتم حذف جميع سجلات المبيعات وعمليات الورشة للمستخدم "${usernameToReset}". هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟`,
+        text: `سيتم حذف جميع سجلات المبيعات وعمليات الورشة للمستخدم "${usernameToReset}". ملاحظة: عمليات الورشة لا تدخل في حساب التارجت ولكن سيتم حذفها أيضاً. هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'نعم، صفر التارجت',
@@ -312,7 +313,7 @@ async function resetUserTarget(usernameToReset) {
              document.dispatchEvent(new CustomEvent('targetResetted'));
 
              Swal.fire({
-                 title: 'تم', text: `تم تصفير التارجت (حذف سجلات المبيعات والورشة) للمستخدم "${usernameToReset}" بنجاح.`, icon: 'success'
+                 title: 'تم', text: `تم تصفير التارجت (حذف سجلات المبيعات والورشة) للمستخدم "${usernameToReset}" بنجاح. ملاحظة: عمليات الورشة لا تدخل في حساب التارجت.`, icon: 'success'
              });
          } catch (error) {
              handleError(error, `خطأ أثناء تصفير تارجت المستخدم ${usernameToReset}`);

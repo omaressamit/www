@@ -166,6 +166,7 @@ async function recordSale() {
 // Updates the "Target" display for the logged-in user
 // TODO: Decide if target should be cross-branch or per-branch.
 // Current implementation: Cross-branch target.
+// Note: Workshop operations are excluded from employee targets
 function updateTargetDisplay() {
     if (!currentUser) return;
 
@@ -178,13 +179,13 @@ function updateTargetDisplay() {
                 totalSalesValue += parseFloat(sale.price || 0);
             }
         });
-         // Add workshop operations to the user's total 'target'
-         const workshopList = branchData[branchId]?.workshopOperations || [];
-         workshopList.forEach(op => {
-             if (op.user === currentUser.username) {
-                 totalSalesValue += parseFloat(op.price || 0);
-             }
-         });
+         // Workshop operations are excluded from employee targets
+         // const workshopList = branchData[branchId]?.workshopOperations || [];
+         // workshopList.forEach(op => {
+         //     if (op.user === currentUser.username) {
+         //         totalSalesValue += parseFloat(op.price || 0);
+         //     }
+         // });
     }
 
     const targetTableBody = document.querySelector('#target-table tbody');
@@ -219,17 +220,19 @@ function updateDailySalesTable() {
     const todayStr = new Date().toLocaleDateString('ar-EG', options);
 
     const branchSales = branchData[branchId]?.sales || [];
-    const branchWorkshopOps = branchData[branchId]?.workshopOperations || [];
+    // Workshop operations are excluded from employee targets
+    // const branchWorkshopOps = branchData[branchId]?.workshopOperations || [];
 
-    // Filter sales and workshop ops for the current user and today for the selected branch
+    // Filter sales for the current user and today for the selected branch (workshop ops excluded from targets)
     const todayTransactions = [
-         ...branchSales.filter(sale => sale.user === currentUser.username && new Date(sale.date).toLocaleDateString('ar-EG', options) === todayStr),
-         ...branchWorkshopOps.filter(op => op.user === currentUser.username && new Date(op.date).toLocaleDateString('ar-EG', options) === todayStr)
+         ...branchSales.filter(sale => sale.user === currentUser.username && new Date(sale.date).toLocaleDateString('ar-EG', options) === todayStr)
+         // Workshop operations excluded from employee targets
+         // ...branchWorkshopOps.filter(op => op.user === currentUser.username && new Date(op.date).toLocaleDateString('ar-EG', options) === todayStr)
         ];
 
 
     if (todayTransactions.length === 0) {
-        dailySalesTableBody.innerHTML = `<tr><td colspan="5">لا يوجد مبيعات أو عمليات ورشة مسجلة لك اليوم في فرع "${selectedBranchName}".</td></tr>`;
+        dailySalesTableBody.innerHTML = `<tr><td colspan="5">لا يوجد مبيعات مسجلة لك اليوم في فرع "${selectedBranchName}".</td></tr>`;
         return;
     }
 
@@ -337,17 +340,19 @@ async function queryEmployeeDailySales() {
     const todayStr = new Date().toLocaleDateString('ar-EG', options);
 
     const branchSales = branchData[branchId]?.sales || [];
-    const branchWorkshopOps = branchData[branchId]?.workshopOperations || [];
+    // Workshop operations are excluded from employee targets
+    // const branchWorkshopOps = branchData[branchId]?.workshopOperations || [];
 
-    // Filter for the selected employee and today in the selected branch
+    // Filter for the selected employee and today in the selected branch (workshop ops excluded from targets)
     const todayEmployeeTransactions = [
-         ...branchSales.filter(sale => sale.user === selectedEmployeeUsername && new Date(sale.date).toLocaleDateString('ar-EG', options) === todayStr),
-         ...branchWorkshopOps.filter(op => op.user === selectedEmployeeUsername && new Date(op.date).toLocaleDateString('ar-EG', options) === todayStr)
+         ...branchSales.filter(sale => sale.user === selectedEmployeeUsername && new Date(sale.date).toLocaleDateString('ar-EG', options) === todayStr)
+         // Workshop operations excluded from employee targets
+         // ...branchWorkshopOps.filter(op => op.user === selectedEmployeeUsername && new Date(op.date).toLocaleDateString('ar-EG', options) === todayStr)
         ];
 
 
     if (todayEmployeeTransactions.length === 0) {
-        employeeDailySalesTableBody.innerHTML = `<tr><td colspan="5">لا يوجد مبيعات أو عمليات ورشة للموظف "${selectedEmployeeUsername}" اليوم في فرع "${selectedBranchName}".</td></tr>`;
+        employeeDailySalesTableBody.innerHTML = `<tr><td colspan="5">لا يوجد مبيعات للموظف "${selectedEmployeeUsername}" اليوم في فرع "${selectedBranchName}".</td></tr>`;
         return;
     }
 

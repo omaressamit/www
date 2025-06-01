@@ -81,7 +81,7 @@ async function recordWorkshopOperation() {
 
         // Dispatch events
         document.dispatchEvent(new CustomEvent('workshopRecorded', { detail: { branchId: branchId } }));
-        // Also trigger saleRecorded if workshop ops contribute to daily totals
+        // Trigger saleRecorded to update daily sales display (workshop ops don't count toward employee targets but are shown in daily totals)
         document.dispatchEvent(new CustomEvent('saleRecorded', { detail: { branchId: branchId } }));
 
 
@@ -369,7 +369,7 @@ async function editWorkshopOperation(operation) {
 
             // Refresh UI
              document.dispatchEvent(new CustomEvent('workshopRecorded', { detail: { branchId: branchId } }));
-             // If workshop contributes to daily sales, trigger that update too
+             // Trigger saleRecorded to update daily sales display (workshop ops don't count toward employee targets but are shown in daily totals)
              document.dispatchEvent(new CustomEvent('saleRecorded', { detail: { branchId: branchId } }));
 
 
