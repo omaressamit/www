@@ -45,6 +45,25 @@ let branchMetadata = {}; // Key: branchId, Value: { name: "...", users: ["..."] 
 let branchData = {};     // Key: branchId, Value: { products: [], sales: [], returns: [], receiving: [], expenses: [], workshopOperations: [] }
 let currentUser = null;
 
+// دالة مساعدة للتحقق من كلمة المرور مع التعامل مع التشفير
+function verifyPassword(storedPassword, inputPassword) {
+    // محاولة فك التشفير إذا كانت كلمة المرور تبدو مشفرة (Base64)
+    if (dbManager && typeof dbManager.decryptSensitiveData === 'function') {
+        try {
+            const decryptedPassword = dbManager.decryptSensitiveData(storedPassword);
+            // إذا نجح فك التشفير ولم تكن نفس القيمة الأصلية، فهي مشفرة
+            if (decryptedPassword !== storedPassword) {
+                return decryptedPassword === inputPassword;
+            }
+        } catch (e) {
+            // إذا فشل فك التشفير، استخدم كلمة المرور كما هي (غير مشفرة)
+        }
+    }
+
+    // مقارنة مباشرة إذا لم تكن مشفرة أو فشل فك التشفير
+    return storedPassword === inputPassword;
+}
+
 // Helper to get branchId from branchName
 function getBranchIdByName(branchName) {
     for (const id in branchMetadata) {
@@ -76,8 +95,8 @@ window.onload = async function () {
             document.getElementById('password').value = password;
             document.getElementById('remember-me').checked = true;
 
-            // Find the user in the database (global users array)
-            const user = users.find(u => u.username === username && u.password === password);
+            // Find the user in the database (global users array) مع التعامل مع التشفير
+            const user = users.find(u => u.username === username && verifyPassword(u.password, password));
             if (user) {
                 currentUser = user;
                 document.getElementById('home').style.display = 'none';
@@ -497,16 +516,23 @@ async function loadData() {
         // Create admin user if no users exist
         if (!users || users.length === 0) {
             console.log("No users found. Creating default admin user.");
+
+            // تشفير كلمة المرور الافتراضية
+            const defaultPassword = 'admin123';
+            const encryptedPassword = dbManager && typeof dbManager.encryptSensitiveData === 'function'
+                ? dbManager.encryptSensitiveData(defaultPassword)
+                : btoa(defaultPassword); // استخدام Base64 كبديل
+
             const adminUser = {
                 username: 'admin',
-                password: 'admin123', // Consider prompting for initial password
+                password: encryptedPassword, // كلمة المرور مشفرة
                 role: 'admin'
             };
             users = [adminUser];
              // Save immediately if online
              if (navigator.onLine) {
                 await database.ref('/users').set(users);
-                console.log("Default admin user saved.");
+                console.log("Default admin user saved with encrypted password.");
              }
              needsSaveAfterMigration = false; // Don't trigger full save if only user was added
         }
@@ -601,7 +627,8 @@ async function login() {
         }
     }
 
-    const user = users.find(u => u.username === username && u.password === password);
+    // البحث عن المستخدم ومقارنة كلمة المرور مع التعامل مع التشفير
+    const user = users.find(u => u.username === username && verifyPassword(u.password, password));
 
     if (user) {
         currentUser = user;

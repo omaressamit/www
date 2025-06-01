@@ -39,10 +39,14 @@ async function addUser() {
         if (dbManager && typeof dbManager.createUser === 'function') {
             const userId = await dbManager.createUser(userData);
         } else {
-            // الطريقة التقليدية
+            // الطريقة التقليدية مع تشفير كلمة المرور
+            const encryptedPassword = dbManager && typeof dbManager.encryptSensitiveData === 'function'
+                ? dbManager.encryptSensitiveData(password)
+                : btoa(password); // استخدام Base64 كبديل إذا لم يكن dbManager متاحاً
+
             const newUser = {
                 username: username,
-                password: password, // سيتم تشفيرها لاحقاً
+                password: encryptedPassword, // كلمة المرور مشفرة
                 role: role,
                 createdAt: new Date().toISOString(),
                 isActive: true
