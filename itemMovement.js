@@ -77,8 +77,8 @@ function showItemMovement() {
 
   productSales.forEach(sale => {
       const row = tableBody.insertRow();
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      const formattedDate = new Date(sale.date).toLocaleDateString('ar-EG', options);
+      const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+      const formattedDate = new Date(sale.date).toLocaleString('ar-EG', options);
       const saleQuantity = parseFloat(sale.quantity || 0);
       const salePrice = parseFloat(sale.price || 0); // Total price for this sale
 

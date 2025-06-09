@@ -221,7 +221,7 @@ function showWorkshopOperations() {
 
             thead.innerHTML = `
                 <tr><th colspan="8" style="text-align: center; background-color: #4CAF50; color: white;">${currentDisplayBranchName}</th></tr>
-                <tr><th>التاريخ</th><th>الوصف</th><th>السعر</th><th>هاتف العميل</th><th>الدفع</th><th>بيانات العميل</th><th>المستخدم</th><th></th></tr>
+                <tr><th>التاريخ والوقت</th><th>الوصف</th><th>السعر</th><th>هاتف العميل</th><th>الدفع</th><th>بيانات العميل</th><th>المستخدم</th><th></th></tr>
             `;
             table.appendChild(thead);
             table.appendChild(tbody);
@@ -231,8 +231,8 @@ function showWorkshopOperations() {
 
         // Add operation row to the current tbody
         const row = tbody.insertRow();
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        const formattedDate = new Date(operation.date).toLocaleDateString('ar-EG', options);
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        const formattedDate = new Date(operation.date).toLocaleString('ar-EG', options);
         const price = parseFloat(operation.price || 0);
 
         row.insertCell(0).textContent = formattedDate;

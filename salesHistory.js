@@ -218,8 +218,8 @@ function renderSalesHistoryTables(filteredSales, filteredReturns, filteredWorksh
 
             // Add Item Row
             const row = salesTableBody.insertRow();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            const formattedDate = new Date(item.date).toLocaleDateString('ar-EG', options);
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+            const formattedDate = new Date(item.date).toLocaleString('ar-EG', options);
             const price = parseFloat(item.price || 0);
 
             row.insertCell(0).textContent = formattedDate;
@@ -295,8 +295,8 @@ function renderSalesHistoryTables(filteredSales, filteredReturns, filteredWorksh
 
          filteredReturns.forEach(ret => {
              const row = returnsTableBody.insertRow();
-             const options = { year: 'numeric', month: 'long', day: 'numeric' };
-             const formattedDate = new Date(ret.date).toLocaleDateString('ar-EG', options);
+             const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+             const formattedDate = new Date(ret.date).toLocaleString('ar-EG', options);
              const price = parseFloat(ret.price || 0);
              const quantity = parseFloat(ret.quantity || 0);
 
@@ -752,7 +752,7 @@ async function deleteReturn(returnItem) {
 // Displays the sale details dialog (No changes needed if data structure is passed correctly)
 function displaySaleDetailsDialog(saleDetails) {
     if (!saleDetails) return;
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
     let formattedDate = 'غير متاح';
     try { formattedDate = saleDetails.date ? new Date(saleDetails.date).toLocaleString('ar-EG', options) : 'غير متاح'; } catch(e) {}
 

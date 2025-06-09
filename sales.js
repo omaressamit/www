@@ -216,7 +216,7 @@ function updateDailySalesTable() {
         return;
     }
 
-    const options = { year: 'numeric', month: 'long', day: 'numeric' }; // Date format for comparison
+    const options = { year: 'numeric', month: '2-digit', day: '2-digit' }; // Date format for comparison
     const todayStr = new Date().toLocaleDateString('ar-EG', options);
 
     const branchSales = branchData[branchId]?.sales || [];
@@ -336,7 +336,7 @@ async function queryEmployeeDailySales() {
     }
 
 
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
     const todayStr = new Date().toLocaleDateString('ar-EG', options);
 
     const branchSales = branchData[branchId]?.sales || [];

@@ -334,9 +334,9 @@ function showExpenses() {
 
 
         const row = expensesListTbody.insertRow();
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
         let formattedDate = 'تاريخ غير صالح';
-        try { formattedDate = new Date(expense.date).toLocaleDateString('ar-EG', options); } catch (e) { }
+        try { formattedDate = new Date(expense.date).toLocaleString('ar-EG', options); } catch (e) { }
 
         const amount = parseFloat(expense.amount || 0);
         const scrapQuantity = parseFloat(expense.scrapQuantity || 0);

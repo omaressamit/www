@@ -220,8 +220,8 @@ function showPurchases() {
              branchHeaderRow.innerHTML = `<td colspan="8" style="background-color: #4CAF50; color: white; text-align: center; font-weight: bold;">${currentDisplayBranchName}</td>`;
          }
 
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        const formattedDate = new Date(receive.date).toLocaleDateString('ar-EG', options);
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        const formattedDate = new Date(receive.date).toLocaleString('ar-EG', options);
         const quantity = parseFloat(receive.quantity || 0);
         const pricePerUnit = parseFloat(receive.purchasePrice || 0); // Price per gram
         const cost = quantity * pricePerUnit;
