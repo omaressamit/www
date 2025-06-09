@@ -169,6 +169,10 @@ async function recordSale() {
         // Dispatch event
         document.dispatchEvent(new CustomEvent('saleRecorded', { detail: { branchId: branchId } }));
 
+        // Update work day display and daily sales table
+        updateWorkDayDisplay();
+        updateDailySalesTable();
+
         Swal.fire({
             title: 'تم', text: 'تم تسجيل عملية البيع بنجاح', icon: 'success',
             timer: 1500, showConfirmButton: false
@@ -237,21 +241,27 @@ function updateDailySalesTable() {
     // Get current active work day
     const activeWorkDay = getCurrentActiveWorkDay();
     if (!activeWorkDay) {
-        dailySalesTableBody.innerHTML = '<tr><td colspan="5">لا يوجد يوم عمل نشط. يرجى بدء يوم العمل لعرض المبيعات.</td></tr>';
+        dailySalesTableBody.innerHTML = '<tr><td colspan="5">🔴 لا يوجد يوم عمل نشط. يرجى بدء يوم العمل أولاً لعرض وتسجيل المبيعات.</td></tr>';
+        return;
+    }
+
+    // If work day has ended, show message that the day is completed
+    if (activeWorkDay.endTime) {
+        dailySalesTableBody.innerHTML = '<tr><td colspan="5">✅ تم إنهاء يوم العمل. لا يمكن عرض أو تسجيل مبيعات جديدة حتى بدء يوم عمل جديد.</td></tr>';
         return;
     }
 
     const branchSales = branchData[branchId]?.sales || [];
 
-    // Filter sales for the current user and current work day for the selected branch
+    // Filter sales for the current user and current active work day for the selected branch
     const workDayStartTime = new Date(activeWorkDay.startTime);
-    const workDayEndTime = activeWorkDay.endTime ? new Date(activeWorkDay.endTime) : new Date();
 
     const todayTransactions = branchSales.filter(sale => {
         if (sale.user !== currentUser.username) return false;
+        if (sale.workDayId !== activeWorkDay.startTime) return false; // Only show sales from current work day
 
         const saleDate = new Date(sale.date);
-        return saleDate >= workDayStartTime && saleDate <= workDayEndTime;
+        return saleDate >= workDayStartTime;
     });
 
 
@@ -337,6 +347,17 @@ function populateBranchEmployeeSelect() {
 
 // Queries and displays daily sales for a selected employee in the selected branch
 async function queryEmployeeDailySales() {
+    // Check if current user can perform queries (has active work day)
+    if (!canRecordSales()) {
+        Swal.fire({
+            title: 'يوم العمل غير نشط',
+            text: 'يجب بدء يوم العمل أولاً قبل الاستعلام عن المبيعات',
+            icon: 'warning',
+            confirmButtonText: 'موافق'
+        });
+        return;
+    }
+
     const selectedEmployeeUsername = document.getElementById('employee-select').value;
     const selectedBranchName = document.getElementById('branch-select').value; // Get selected branch
     const employeeDailySalesTableBody = document.querySelector('#employee-daily-sales-table tbody');
@@ -417,8 +438,15 @@ async function queryEmployeeDailySales() {
 function initializeWorkDayStatus() {
     if (!currentUser) return;
 
+    // Initialize workDays array if it doesn't exist
+    if (!currentUser.workDays) {
+        currentUser.workDays = [];
+    }
+
     updateWorkDayDisplay();
     updateWorkDayControls();
+    updateSalesInterfaceState();
+    updateDailySalesTable();
 }
 
 // Start a new work day for the current user
@@ -463,6 +491,8 @@ async function startWorkDay() {
 
             updateWorkDayDisplay();
             updateWorkDayControls();
+            updateSalesInterfaceState();
+            updateDailySalesTable();
             startWorkDayTimer();
 
             Swal.fire({
@@ -518,6 +548,8 @@ async function endWorkDay() {
 
             updateWorkDayDisplay();
             updateWorkDayControls();
+            updateSalesInterfaceState();
+            updateDailySalesTable();
             stopWorkDayTimer();
 
             Swal.fire({
@@ -536,9 +568,17 @@ async function endWorkDay() {
 
 // Get the current active work day for the user
 function getCurrentActiveWorkDay() {
-    if (!currentUser || !currentUser.workDays) return null;
+    if (!currentUser || !currentUser.workDays || !Array.isArray(currentUser.workDays)) {
+        return null;
+    }
 
-    return currentUser.workDays.find(workDay => workDay.isActive && workDay.userId === currentUser.username);
+    return currentUser.workDays.find(workDay => {
+        if (!workDay || typeof workDay !== 'object') return false;
+
+        return workDay.isActive === true &&
+               workDay.userId === currentUser.username &&
+               !workDay.endTime; // Only return work days that haven't ended
+    }) || null;
 }
 
 // Update the work day display
@@ -548,21 +588,46 @@ function updateWorkDayDisplay() {
 
     if (!indicator || !duration) return;
 
-    const activeWorkDay = getCurrentActiveWorkDay();
+    // Check for any work day (active or ended) for current user
+    if (!currentUser || !currentUser.workDays || !Array.isArray(currentUser.workDays)) {
+        indicator.textContent = '🔴 يوم العمل: غير مبدوء';
+        indicator.className = 'inactive';
+        duration.textContent = 'لم يتم بدء يوم العمل بعد';
+        return;
+    }
 
-    if (activeWorkDay) {
+    const allWorkDays = currentUser.workDays;
+    const latestWorkDay = allWorkDays
+        .filter(wd => wd && wd.userId === currentUser.username)
+        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
+
+    if (latestWorkDay && !latestWorkDay.endTime) {
+        // Active work day
         indicator.textContent = '🟢 يوم العمل: نشط';
         indicator.className = 'active';
 
-        const startTime = new Date(activeWorkDay.startTime);
+        const startTime = new Date(latestWorkDay.startTime);
         const now = new Date();
         const durationMs = now - startTime;
         const hours = Math.floor(durationMs / (1000 * 60 * 60));
         const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
         duration.textContent = `مدة العمل: ${hours} ساعة و ${minutes} دقيقة`;
+    } else if (latestWorkDay && latestWorkDay.endTime) {
+        // Ended work day
+        indicator.textContent = '⏹️ يوم العمل: منتهي';
+        indicator.className = 'inactive';
+
+        const startTime = new Date(latestWorkDay.startTime);
+        const endTime = new Date(latestWorkDay.endTime);
+        const durationMs = endTime - startTime;
+        const hours = Math.floor(durationMs / (1000 * 60 * 60));
+        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        duration.textContent = `آخر يوم عمل: ${hours} ساعة و ${minutes} دقيقة`;
     } else {
-        indicator.textContent = '🔴 يوم العمل: غير نشط';
+        // No work day started
+        indicator.textContent = '🔴 يوم العمل: غير مبدوء';
         indicator.className = 'inactive';
         duration.textContent = 'لم يتم بدء يوم العمل بعد';
     }
@@ -575,12 +640,24 @@ function updateWorkDayControls() {
 
     if (!startBtn || !endBtn) return;
 
-    const activeWorkDay = getCurrentActiveWorkDay();
+    // Check for any work day (active or ended) for current user
+    if (!currentUser || !currentUser.workDays || !Array.isArray(currentUser.workDays)) {
+        startBtn.style.display = 'block';
+        endBtn.style.display = 'none';
+        return;
+    }
 
-    if (activeWorkDay) {
+    const allWorkDays = currentUser.workDays;
+    const latestWorkDay = allWorkDays
+        .filter(wd => wd && wd.userId === currentUser.username)
+        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
+
+    if (latestWorkDay && !latestWorkDay.endTime) {
+        // Active work day - show end button
         startBtn.style.display = 'none';
         endBtn.style.display = 'block';
     } else {
+        // No active work day - show start button
         startBtn.style.display = 'block';
         endBtn.style.display = 'none';
     }
@@ -603,8 +680,77 @@ function stopWorkDayTimer() {
     }
 }
 
-// Check if user can record sales (has active work day)
+// Check if user can record sales (has active work day and it's not ended)
 function canRecordSales() {
     const activeWorkDay = getCurrentActiveWorkDay();
     return activeWorkDay !== null;
+}
+
+// Enable or disable sales interface elements based on work day status
+function updateSalesInterfaceState() {
+    if (!currentUser) return;
+
+    const canRecord = canRecordSales();
+
+    // Sales form elements
+    const salesElements = [
+        'branch-select',
+        'sale-date',
+        'product-select',
+        'sale-quantity',
+        'sale-price',
+        'customer-phone',
+        'sale-details',
+        'payment-method',
+        'customer-details'
+    ];
+
+    // Record sale button
+    const recordSaleBtn = document.querySelector('button[onclick="recordSale()"]');
+
+    // Employee query elements
+    const employeeSelect = document.getElementById('employee-select');
+    const queryBtn = document.querySelector('button[onclick="queryEmployeeDailySales()"]');
+
+    // Enable/disable sales form elements
+    salesElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.disabled = !canRecord;
+            if (!canRecord) {
+                element.style.opacity = '0.5';
+                element.style.cursor = 'not-allowed';
+            } else {
+                element.style.opacity = '1';
+                element.style.cursor = '';
+            }
+        }
+    });
+
+    // Enable/disable record sale button
+    if (recordSaleBtn) {
+        recordSaleBtn.disabled = !canRecord;
+        if (!canRecord) {
+            recordSaleBtn.style.opacity = '0.5';
+            recordSaleBtn.style.cursor = 'not-allowed';
+            recordSaleBtn.title = 'يجب بدء يوم العمل أولاً';
+        } else {
+            recordSaleBtn.style.opacity = '1';
+            recordSaleBtn.style.cursor = 'pointer';
+            recordSaleBtn.title = '';
+        }
+    }
+
+    // Enable/disable employee query elements
+    if (employeeSelect) {
+        employeeSelect.disabled = !canRecord;
+        employeeSelect.style.opacity = canRecord ? '1' : '0.5';
+    }
+
+    if (queryBtn) {
+        queryBtn.disabled = !canRecord;
+        queryBtn.style.opacity = canRecord ? '1' : '0.5';
+        queryBtn.style.cursor = canRecord ? 'pointer' : 'not-allowed';
+        queryBtn.title = canRecord ? '' : 'يجب بدء يوم العمل أولاً';
+    }
 }

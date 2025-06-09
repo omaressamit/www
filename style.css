@@ -579,6 +579,29 @@ th {
     box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
 }
 
+/* Disabled elements styles */
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+    background-color: #2a2a2a !important;
+    color: #666 !important;
+    border-color: #444 !important;
+    cursor: not-allowed !important;
+}
+
+button:disabled {
+    background-color: #444 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+button:disabled:hover {
+    background-color: #444 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 #employee-daily-sales-table th {
     background-color: #4CAF50;
     color: white;
