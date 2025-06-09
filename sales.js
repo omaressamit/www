@@ -2,6 +2,9 @@
 
 let lastSaleClickTime = 0; // Initialize timestamp
 
+// Work day management variables
+let workDayUpdateInterval = null;
+
 // Sets today's date as default in the sale date field
 function setDefaultSaleDate() {
     const saleDateInput = document.getElementById('sale-date');
@@ -15,6 +18,17 @@ function setDefaultSaleDate() {
 async function recordSale() {
     if (!currentUser) {
         Swal.fire('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
+        return;
+    }
+
+    // Check if user has an active work day
+    if (!canRecordSales()) {
+        Swal.fire({
+            title: 'يوم العمل غير نشط',
+            text: 'يجب بدء يوم العمل أولاً قبل تسجيل المبيعات',
+            icon: 'warning',
+            confirmButtonText: 'موافق'
+        });
         return;
     }
 
@@ -112,6 +126,9 @@ async function recordSale() {
     // Set the time to current time but keep the selected date
     selectedDate.setHours(currentTime.getHours(), currentTime.getMinutes(), currentTime.getSeconds(), currentTime.getMilliseconds());
 
+    // Get current active work day
+    const activeWorkDay = getCurrentActiveWorkDay();
+
     // Add record to the specific branch's sales list
     const newSaleRecord = {
         date: selectedDate.toISOString(),
@@ -123,7 +140,8 @@ async function recordSale() {
         user: currentUser.username,
         paymentMethod: paymentMethod,
         customerDetails: customerDetails,
-        type: 'sale'
+        type: 'sale',
+        workDayId: activeWorkDay ? activeWorkDay.startTime : null // Link to work day
         // branch: branchName // Optional redundancy
     };
     branchData[branchId].sales.push(newSaleRecord);
@@ -216,23 +234,29 @@ function updateDailySalesTable() {
         return;
     }
 
-    const options = { year: 'numeric', month: '2-digit', day: '2-digit' }; // Date format for comparison
-    const todayStr = new Date().toLocaleDateString('ar-EG', options);
+    // Get current active work day
+    const activeWorkDay = getCurrentActiveWorkDay();
+    if (!activeWorkDay) {
+        dailySalesTableBody.innerHTML = '<tr><td colspan="5">لا يوجد يوم عمل نشط. يرجى بدء يوم العمل لعرض المبيعات.</td></tr>';
+        return;
+    }
 
     const branchSales = branchData[branchId]?.sales || [];
-    // Workshop operations are excluded from employee targets
-    // const branchWorkshopOps = branchData[branchId]?.workshopOperations || [];
 
-    // Filter sales for the current user and today for the selected branch (workshop ops excluded from targets)
-    const todayTransactions = [
-         ...branchSales.filter(sale => sale.user === currentUser.username && new Date(sale.date).toLocaleDateString('ar-EG', options) === todayStr)
-         // Workshop operations excluded from employee targets
-         // ...branchWorkshopOps.filter(op => op.user === currentUser.username && new Date(op.date).toLocaleDateString('ar-EG', options) === todayStr)
-        ];
+    // Filter sales for the current user and current work day for the selected branch
+    const workDayStartTime = new Date(activeWorkDay.startTime);
+    const workDayEndTime = activeWorkDay.endTime ? new Date(activeWorkDay.endTime) : new Date();
+
+    const todayTransactions = branchSales.filter(sale => {
+        if (sale.user !== currentUser.username) return false;
+
+        const saleDate = new Date(sale.date);
+        return saleDate >= workDayStartTime && saleDate <= workDayEndTime;
+    });
 
 
     if (todayTransactions.length === 0) {
-        dailySalesTableBody.innerHTML = `<tr><td colspan="5">لا يوجد مبيعات مسجلة لك اليوم في فرع "${selectedBranchName}".</td></tr>`;
+        dailySalesTableBody.innerHTML = `<tr><td colspan="5">لا يوجد مبيعات مسجلة لك في يوم العمل الحالي في فرع "${selectedBranchName}".</td></tr>`;
         return;
     }
 
@@ -265,7 +289,7 @@ function updateDailySalesTable() {
     const totalRow = dailySalesTableBody.insertRow();
     totalRow.innerHTML = `
         <td colspan="5" style="text-align: center; background-color: #555;">
-            <strong> إجمالي اليوم (${selectedBranchName}): ${totalDailyValue.toFixed(2)} </strong>
+            <strong> إجمالي يوم العمل (${selectedBranchName}): ${totalDailyValue.toFixed(2)} </strong>
         </td>`;
 }
 
@@ -385,4 +409,202 @@ async function queryEmployeeDailySales() {
     // Add total row
     const totalRow = employeeDailySalesTableBody.insertRow();
     totalRow.innerHTML = `<td colspan="5" style="text-align: center; background-color: #555;"><strong>إجمالي اليوم للموظف (${selectedEmployeeUsername}): ${totalEmployeeDailyValue.toFixed(2)}</strong></td>`;
+}
+
+// ==================== WORK DAY MANAGEMENT FUNCTIONS ====================
+
+// Initialize work day status when page loads
+function initializeWorkDayStatus() {
+    if (!currentUser) return;
+
+    updateWorkDayDisplay();
+    updateWorkDayControls();
+}
+
+// Start a new work day for the current user
+async function startWorkDay() {
+    if (!currentUser) {
+        Swal.fire('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: 'بدء يوم العمل',
+        text: 'هل أنت متأكد من بدء يوم عمل جديد؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، ابدأ',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#4CAF50',
+        cancelButtonColor: '#d33'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const workDayData = {
+                startTime: new Date().toISOString(),
+                endTime: null,
+                isActive: true,
+                userId: currentUser.username
+            };
+
+            // Save work day data to user's profile
+            if (!currentUser.workDays) {
+                currentUser.workDays = [];
+            }
+            currentUser.workDays.push(workDayData);
+
+            // Update user in the global users array
+            const userIndex = users.findIndex(u => u.username === currentUser.username);
+            if (userIndex !== -1) {
+                users[userIndex] = currentUser;
+                await database.ref('/users').set(users);
+            }
+
+            updateWorkDayDisplay();
+            updateWorkDayControls();
+            startWorkDayTimer();
+
+            Swal.fire({
+                title: 'تم بدء يوم العمل',
+                text: 'تم بدء يوم العمل بنجاح. يمكنك الآن تسجيل المبيعات.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            handleError(error, "خطأ أثناء بدء يوم العمل");
+        }
+    }
+}
+
+// End the current work day
+async function endWorkDay() {
+    if (!currentUser) {
+        Swal.fire('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
+        return;
+    }
+
+    const activeWorkDay = getCurrentActiveWorkDay();
+    if (!activeWorkDay) {
+        Swal.fire('تنبيه', 'لا يوجد يوم عمل نشط لإنهائه', 'warning');
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: 'إنهاء يوم العمل',
+        text: 'هل أنت متأكد من إنهاء يوم العمل الحالي؟ لن تتمكن من تسجيل مبيعات جديدة حتى تبدأ يوم عمل جديد.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، أنهِ اليوم',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#ff6b6b',
+        cancelButtonColor: '#6c757d'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            // Update the active work day
+            activeWorkDay.endTime = new Date().toISOString();
+            activeWorkDay.isActive = false;
+
+            // Update user in the global users array
+            const userIndex = users.findIndex(u => u.username === currentUser.username);
+            if (userIndex !== -1) {
+                users[userIndex] = currentUser;
+                await database.ref('/users').set(users);
+            }
+
+            updateWorkDayDisplay();
+            updateWorkDayControls();
+            stopWorkDayTimer();
+
+            Swal.fire({
+                title: 'تم إنهاء يوم العمل',
+                text: 'تم إنهاء يوم العمل بنجاح. شكراً لك على عملك اليوم!',
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            handleError(error, "خطأ أثناء إنهاء يوم العمل");
+        }
+    }
+}
+
+// Get the current active work day for the user
+function getCurrentActiveWorkDay() {
+    if (!currentUser || !currentUser.workDays) return null;
+
+    return currentUser.workDays.find(workDay => workDay.isActive && workDay.userId === currentUser.username);
+}
+
+// Update the work day display
+function updateWorkDayDisplay() {
+    const indicator = document.getElementById('work-day-indicator');
+    const duration = document.getElementById('work-day-duration');
+
+    if (!indicator || !duration) return;
+
+    const activeWorkDay = getCurrentActiveWorkDay();
+
+    if (activeWorkDay) {
+        indicator.textContent = '🟢 يوم العمل: نشط';
+        indicator.className = 'active';
+
+        const startTime = new Date(activeWorkDay.startTime);
+        const now = new Date();
+        const durationMs = now - startTime;
+        const hours = Math.floor(durationMs / (1000 * 60 * 60));
+        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        duration.textContent = `مدة العمل: ${hours} ساعة و ${minutes} دقيقة`;
+    } else {
+        indicator.textContent = '🔴 يوم العمل: غير نشط';
+        indicator.className = 'inactive';
+        duration.textContent = 'لم يتم بدء يوم العمل بعد';
+    }
+}
+
+// Update work day control buttons
+function updateWorkDayControls() {
+    const startBtn = document.getElementById('start-work-day-btn');
+    const endBtn = document.getElementById('end-work-day-btn');
+
+    if (!startBtn || !endBtn) return;
+
+    const activeWorkDay = getCurrentActiveWorkDay();
+
+    if (activeWorkDay) {
+        startBtn.style.display = 'none';
+        endBtn.style.display = 'block';
+    } else {
+        startBtn.style.display = 'block';
+        endBtn.style.display = 'none';
+    }
+}
+
+// Start the work day timer
+function startWorkDayTimer() {
+    stopWorkDayTimer(); // Clear any existing timer
+
+    workDayUpdateInterval = setInterval(() => {
+        updateWorkDayDisplay();
+    }, 60000); // Update every minute
+}
+
+// Stop the work day timer
+function stopWorkDayTimer() {
+    if (workDayUpdateInterval) {
+        clearInterval(workDayUpdateInterval);
+        workDayUpdateInterval = null;
+    }
+}
+
+// Check if user can record sales (has active work day)
+function canRecordSales() {
+    const activeWorkDay = getCurrentActiveWorkDay();
+    return activeWorkDay !== null;
 }

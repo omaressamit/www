@@ -89,6 +89,19 @@
 
                 <button onclick="recordSale()">تسجيل عملية البيع</button>
 
+                <!-- Work Day Management Section -->
+                <div class="work-day-section">
+                    <div class="work-day-status" id="work-day-status">
+                        <span id="work-day-indicator">🔴 يوم العمل: غير محدد</span>
+                        <span id="work-day-duration"></span>
+                    </div>
+                    <div class="work-day-controls">
+                        <button id="start-work-day-btn" onclick="startWorkDay()" style="display: none;">بدء يوم العمل</button>
+                        <button id="end-work-day-btn" onclick="endWorkDay()" style="display: none;">إنهاء يوم العمل</button>
+                    </div>
+                </div>
+                <hr class="separator">
+
                 <!-- Target Table -->
                 <table id="target-table">
                     <thead>

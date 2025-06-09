@@ -349,6 +349,7 @@ function showPage(pageId) {
         updateDailySalesTable(); // Update daily sales (may need branch context)
         populateBranchEmployeeSelect(); // Populate employee dropdown for selected branch
         setDefaultSaleDate(); // Set today's date as default
+        initializeWorkDayStatus(); // Initialize work day management
     } else if (pageId === 'expenses') {
         updateExpensesPage(); // Updates dropdowns and form visibility
         // Don't show history automatically
