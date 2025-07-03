@@ -193,12 +193,21 @@ function updateTargetDisplay() {
     if (!currentUser) return;
 
     let totalSalesValue = 0;
+    // Get current user's reset date if any
+    const currentUserData = users.find(u => u.username === currentUser.username);
+    const resetDate = currentUserData?.targetResetDate ? new Date(currentUserData.targetResetDate) : null;
+
     // Iterate through all branches the user might have sold in
     for (const branchId in branchData) {
         const salesList = branchData[branchId]?.sales || [];
         salesList.forEach(sale => {
             if (sale.user === currentUser.username) {
-                totalSalesValue += parseFloat(sale.price || 0);
+                // Only count sales after the last target reset (if any)
+                const saleDate = new Date(sale.date);
+
+                if (!resetDate || saleDate > resetDate) {
+                    totalSalesValue += parseFloat(sale.price || 0);
+                }
             }
         });
          // Workshop operations are excluded from employee targets
