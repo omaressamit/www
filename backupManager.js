@@ -301,16 +301,32 @@ class BackupManager {
     // تشفير البيانات (تنفيذ بسيط)
     encryptData(data) {
         // في التطبيق الحقيقي، يجب استخدام تشفير قوي
-        // استخدام encodeURIComponent للتعامل مع الأحرف العربية
+        // استخدام TextEncoder/TextDecoder للتعامل مع الأحرف العربية
         const jsonString = JSON.stringify(data);
-        const encodedString = encodeURIComponent(jsonString);
-        return btoa(encodedString);
+        const encoder = new TextEncoder();
+        const uint8Array = encoder.encode(jsonString);
+
+        // تحويل Uint8Array إلى string binary
+        let binaryString = '';
+        for (let i = 0; i < uint8Array.length; i++) {
+            binaryString += String.fromCharCode(uint8Array[i]);
+        }
+
+        return btoa(binaryString);
     }
 
     // فك تشفير البيانات
     decryptData(encryptedData) {
-        const decodedString = atob(encryptedData);
-        const jsonString = decodeURIComponent(decodedString);
+        const binaryString = atob(encryptedData);
+
+        // تحويل binary string إلى Uint8Array
+        const uint8Array = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            uint8Array[i] = binaryString.charCodeAt(i);
+        }
+
+        const decoder = new TextDecoder();
+        const jsonString = decoder.decode(uint8Array);
         return JSON.parse(jsonString);
     }
 
