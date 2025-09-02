@@ -351,7 +351,12 @@ async function resetUserTarget(usernameToReset) {
                     userToReset.targetBeforeReset = currentTarget; // Store the target value before reset
                     userToReset.targetResetCount = (userToReset.targetResetCount || 0) + 1;
 
-                    await database.ref('/users').set(users);
+                    // Save the canonical data structure to ensure persistence
+                    if (typeof saveData === 'function') {
+                        await saveData();
+                    } else {
+                        await database.ref('/users').set(users);
+                    }
 
                     // Dispatch event to refresh user list
                     document.dispatchEvent(new CustomEvent('targetResetted'));
