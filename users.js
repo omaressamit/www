@@ -351,6 +351,13 @@ async function resetUserTarget(usernameToReset) {
                     userToReset.targetBeforeReset = currentTarget; // Store the target value before reset
                     userToReset.targetResetCount = (userToReset.targetResetCount || 0) + 1;
 
+                    // Show loading indicator while saving
+                    Swal.fire({
+                        title: 'جاري الحفظ...',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+
                     // Save the canonical data structure to ensure persistence
                     if (typeof saveData === 'function') {
                         await saveData();
@@ -358,7 +365,10 @@ async function resetUserTarget(usernameToReset) {
                         await database.ref('/users').set(users);
                     }
 
-                    // Dispatch event to refresh user list
+                    // Hide loading indicator
+                    Swal.close();
+
+                    // Dispatch event to refresh user list (only after save completes)
                     document.dispatchEvent(new CustomEvent('targetResetted'));
 
                     Swal.fire({
@@ -374,6 +384,7 @@ async function resetUserTarget(usernameToReset) {
                     });
                 }
             } catch (error) {
+                Swal.close();
                 handleError(error, `خطأ أثناء تصفير تارجت المستخدم ${usernameToReset}`);
             }
         }
