@@ -449,6 +449,18 @@ async function editSale(sale) {
 
     if (updatedSaleData) {
         const branchId = sale.branchId;
+        // Adjust targetBalance for the user
+        const userObj = users.find(u => u.username === sale.user);
+        if (userObj) {
+            const oldAmount = parseFloat(sale.price || 0);
+            const newAmount = parseFloat(updatedSaleData.price || 0);
+            userObj.targetBalance = (userObj.targetBalance || 0) - oldAmount + newAmount;
+            if (typeof saveData === 'function') {
+                await saveData();
+            } else if (typeof database !== 'undefined') {
+                await database.ref('/users').set(users);
+            }
+        }
         // Find index within the specific branch's sales array
         const saleIndex = branchData[branchId]?.sales.findIndex(s => s.date === sale.date && s.user === sale.user && s.product === sale.product);
 
@@ -545,6 +557,17 @@ async function deleteSale(sale) {
     if (confirmResult.isConfirmed) {
         const branchId = sale.branchId;
         const saleIndex = branchData[branchId]?.sales.findIndex(s => s.date === sale.date && s.user === sale.user && s.product === sale.product && s.price === sale.price);
+        // Adjust targetBalance for the user
+        const userObj = users.find(u => u.username === sale.user);
+        if (userObj) {
+            const amount = parseFloat(sale.price || 0);
+            userObj.targetBalance = (userObj.targetBalance || 0) - amount;
+            if (typeof saveData === 'function') {
+                await saveData();
+            } else if (typeof database !== 'undefined') {
+                await database.ref('/users').set(users);
+            }
+        }
 
         if (saleIndex === -1 || !branchData[branchId].products) {
              Swal.fire('خطأ', 'لم يتم العثور على عملية البيع الأصلية أو بيانات الأصناف.', 'error'); return;

@@ -144,7 +144,19 @@ async function recordSale() {
         workDayId: activeWorkDay ? activeWorkDay.startTime : null // Link to work day
         // branch: branchName // Optional redundancy
     };
+
     branchData[branchId].sales.push(newSaleRecord);
+
+    // Increment user's targetBalance
+    const userObj = users.find(u => u.username === currentUser.username);
+    if (userObj) {
+        userObj.targetBalance = (userObj.targetBalance || 0) + salePrice;
+        if (typeof saveData === 'function') {
+            await saveData();
+        } else if (typeof database !== 'undefined') {
+            await database.ref('/users').set(users);
+        }
+    }
 
     lastSaleClickTime = now; // Update timestamp
 

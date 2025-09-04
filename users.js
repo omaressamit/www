@@ -14,7 +14,8 @@ async function addUser() {
     const userData = {
         username: username,
         password: password,
-        role: role
+        role: role,
+        targetBalance: 0 // Initialize running target balance
     };
 
     try {
@@ -106,33 +107,9 @@ async function updateUsersList() {
         row.insertCell(0).textContent = user.username;
         row.insertCell(1).textContent = user.role === 'admin' ? 'مسؤول' : 'مستخدم';
 
-        // Calculate total sales (target) for this user across ALL branches
-        // Note: Workshop operations are excluded from employee targets
-        let totalSalesValue = 0;
-        for (const branchId in branchData) {
-            const salesList = branchData[branchId]?.sales || [];
-            salesList.forEach(sale => {
-                if (sale.user === user.username) {
-                    // Only count sales after the last target reset (if any)
-                    const saleDate = new Date(sale.date);
-                    const resetDate = user.targetResetDate ? new Date(user.targetResetDate) : null;
-
-                    if (!resetDate || saleDate > resetDate) {
-                        totalSalesValue += parseFloat(sale.price || 0);
-                    }
-                }
-            });
-             // Workshop operations are excluded from employee targets
-             // const workshopList = branchData[branchId]?.workshopOperations || [];
-             // workshopList.forEach(op => {
-             //     if (op.user === user.username) {
-             //         totalSalesValue += parseFloat(op.price || 0);
-             //     }
-             // });
-        }
-        // Display target/total sales with reset info if applicable
-        let targetDisplayText = totalSalesValue.toFixed(2);
-        if (user.targetResetDate && user.targetBeforeReset) {
+        // Display running target balance
+        let targetDisplayText = (user.targetBalance || 0).toFixed(2);
+        if (user.targetResetDate) {
             const resetDate = new Date(user.targetResetDate).toLocaleDateString('ar-EG');
             targetDisplayText += ` (صُفر في ${resetDate})`;
         }
@@ -286,111 +263,78 @@ async function resetUserTarget(usernameToReset) {
         Swal.fire('خطأ', 'يجب تسجيل الدخول كمسؤول لتصفير التارجت', 'error');
         return;
     }
-     if (usernameToReset === currentUser.username) {
+    if (usernameToReset === currentUser.username) {
         Swal.fire('خطأ', 'لا يمكن تصفير التارجت للمستخدم الحالي (المسؤول).', 'error');
         return;
     }
 
-    // Show options for what to reset
-    const { value: resetOption } = await Swal.fire({
-        title: `تصفير التارجت للمستخدم "${usernameToReset}"`,
-        text: 'اختر نوع التصفير المطلوب:',
-        icon: 'question',
-        input: 'radio',
-        inputOptions: {
-            'target_only': 'تصفير التارجت فقط (الاحتفاظ بالسجلات التاريخية)',
-            'delete_records': 'حذف جميع السجلات والعمليات (لا يمكن التراجع عنه)'
-        },
-        inputValidator: (value) => {
-            if (!value) {
-                return 'يجب اختيار نوع التصفير!'
-            }
-        },
+    // Only allow target reset (do not delete any records)
+    const confirmResult = await Swal.fire({
+        title: `تأكيد تصفير التارجت`,
+        text: `سيتم تصفير التارجت للمستخدم "${usernameToReset}" مع الاحتفاظ بجميع السجلات التاريخية. هل أنت متأكد؟`,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'متابعة',
-        cancelButtonText: 'إلغاء'
+        confirmButtonText: 'نعم، صفر التارجت',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#3085d6',
     });
 
-    if (!resetOption) return;
+    if (!confirmResult.isConfirmed) return;
 
-    if (resetOption === 'target_only') {
-        // Reset target only - find user and reset their target
+    try {
+        // Calculate current target (total sales) for the user
+        let currentTarget = 0;
+        for (const branchId in branchData) {
+            const salesList = branchData[branchId]?.sales || [];
+            salesList.forEach(sale => {
+                if (sale.user === usernameToReset) {
+                    currentTarget += parseFloat(sale.price || 0);
+                }
+            });
+        }
+
+        // Always allow reset, even if target is 0
         const userToReset = users.find(u => u.username === usernameToReset);
         if (!userToReset) {
             Swal.fire('خطأ', 'لم يتم العثور على المستخدم المحدد.', 'error');
             return;
         }
 
-        const confirmResult = await Swal.fire({
-            title: `تأكيد تصفير التارجت`,
-            text: `سيتم تصفير التارجت للمستخدم "${usernameToReset}" مع الاحتفاظ بجميع السجلات التاريخية. هل أنت متأكد؟`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'نعم، صفر التارجت',
-            cancelButtonText: 'إلغاء',
-            confirmButtonColor: '#3085d6',
+    userToReset.targetBalance = 0;
+    userToReset.targetResetDate = new Date().toISOString();
+        userToReset.targetResetBy = currentUser.username;
+        userToReset.targetBeforeReset = currentTarget; // Store the target value before reset
+        userToReset.targetResetCount = (userToReset.targetResetCount || 0) + 1;
+
+        // Show loading indicator while saving
+        Swal.fire({
+            title: 'جاري الحفظ...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
         });
 
-        if (confirmResult.isConfirmed) {
-            try {
-                // Calculate current target (total sales) for the user
-                let currentTarget = 0;
-                for (const branchId in branchData) {
-                    const salesList = branchData[branchId]?.sales || [];
-                    salesList.forEach(sale => {
-                        if (sale.user === usernameToReset) {
-                            currentTarget += parseFloat(sale.price || 0);
-                        }
-                    });
-                }
-
-                if (currentTarget > 0) {
-                    // Add target reset information to user
-                    userToReset.targetResetDate = new Date().toISOString();
-                    userToReset.targetResetBy = currentUser.username;
-                    userToReset.targetBeforeReset = currentTarget; // Store the target value before reset
-                    userToReset.targetResetCount = (userToReset.targetResetCount || 0) + 1;
-
-                    // Show loading indicator while saving
-                    Swal.fire({
-                        title: 'جاري الحفظ...',
-                        allowOutsideClick: false,
-                        didOpen: () => Swal.showLoading()
-                    });
-
-                    // Save the canonical data structure to ensure persistence
-                    if (typeof saveData === 'function') {
-                        await saveData();
-                    } else {
-                        await database.ref('/users').set(users);
-                    }
-
-                    // Hide loading indicator
-                    Swal.close();
-
-                    // Dispatch event to refresh user list (only after save completes)
-                    document.dispatchEvent(new CustomEvent('targetResetted'));
-
-                    Swal.fire({
-                        title: 'تم',
-                        text: `تم تسجيل تصفير التارجت للمستخدم "${usernameToReset}" (كان ${currentTarget.toFixed(2)}) مع الاحتفاظ بجميع السجلات التاريخية.`,
-                        icon: 'success'
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'تنبيه',
-                        text: `المستخدم "${usernameToReset}" لا يحتوي على مبيعات حالياً (التارجت = 0).`,
-                        icon: 'info'
-                    });
-                }
-            } catch (error) {
-                Swal.close();
-                handleError(error, `خطأ أثناء تصفير تارجت المستخدم ${usernameToReset}`);
-            }
+        // Save and confirm persistence before allowing further actions
+        if (typeof saveData === 'function') {
+            await saveData();
+        } else {
+            await database.ref('/users').set(users);
         }
-    } else if (resetOption === 'delete_records') {
-        // Delete all records - original functionality
-        await deleteUserRecords(usernameToReset);
+
+        // Reload users from database to confirm reset fields are present
+        if (typeof loadData === 'function') {
+            await loadData();
+        }
+
+        Swal.close();
+        document.dispatchEvent(new CustomEvent('targetResetted'));
+        Swal.fire({
+            title: 'تم',
+            text: `تم تسجيل تصفير التارجت للمستخدم "${usernameToReset}" (كان ${currentTarget.toFixed(2)}) مع الاحتفاظ بجميع السجلات التاريخية.`,
+            icon: 'success'
+        });
+    } catch (error) {
+        Swal.close();
+        handleError(error, `خطأ أثناء تصفير تارجت المستخدم ${usernameToReset}`);
     }
 }
 
