@@ -137,11 +137,21 @@ async function updateUsersList() {
 
              // Reset Target button (only for admins, not applicable to self)
              if (currentUser.role === 'admin' && user.username !== currentUser.username) {
+
+                 // Add date picker for target reset
+                 const resetDateInput = document.createElement('input');
+                 resetDateInput.type = 'date';
+                 resetDateInput.className = 'reset-date-input';
+                 resetDateInput.style.width = 'auto';
+                 resetDateInput.style.marginLeft = '5px';
+                 resetDateInput.value = user.targetResetDate ? new Date(user.targetResetDate).toISOString().split('T')[0] : '';
+                 actionsCell.appendChild(resetDateInput);
+
                  const resetTargetButton = document.createElement('button');
                  resetTargetButton.textContent = 'تصفير التارجت';
-                 resetTargetButton.onclick = () => resetUserTarget(user.username);
                  resetTargetButton.className = 'reset-target-btn'; // Defined in style.css
                  resetTargetButton.style.width = 'auto'; resetTargetButton.style.marginLeft = '5px';
+                 resetTargetButton.onclick = () => resetUserTarget(user.username, resetDateInput.value);
                  actionsCell.appendChild(resetTargetButton);
 
                  // Delete Records button (separate from reset target)
@@ -258,7 +268,7 @@ async function deleteUser(usernameToDelete) {
 }
 
 // Resets the target for a specific user (Admin only) - Does NOT delete historical records
-async function resetUserTarget(usernameToReset) {
+async function resetUserTarget(usernameToReset, chosenResetDate = null) {
     if (!currentUser || currentUser.role !== 'admin') {
         Swal.fire('خطأ', 'يجب تسجيل الدخول كمسؤول لتصفير التارجت', 'error');
         return;
@@ -291,11 +301,33 @@ async function resetUserTarget(usernameToReset) {
 
         // Directly reset targetBalance and record metadata
         const previousTarget = userToReset.targetBalance || 0;
-        userToReset.targetBalance = 0;
-        userToReset.targetResetDate = new Date().toISOString();
+        // Use chosen date if provided, otherwise now
+        let resetDateObj;
+        if (chosenResetDate) {
+            resetDateObj = new Date(chosenResetDate + 'T00:00:00');
+            userToReset.targetResetDate = resetDateObj.toISOString();
+        } else {
+            resetDateObj = new Date();
+            userToReset.targetResetDate = resetDateObj.toISOString();
+        }
         userToReset.targetResetBy = currentUser.username;
         userToReset.targetBeforeReset = previousTarget; // Store the target value before reset
         userToReset.targetResetCount = (userToReset.targetResetCount || 0) + 1;
+
+        // Recalculate targetBalance from all sales after the reset date
+        let newTargetBalance = 0;
+        for (const branchId in branchData) {
+            const salesList = branchData[branchId]?.sales || [];
+            salesList.forEach(sale => {
+                if (sale.user === userToReset.username) {
+                    const saleDate = new Date(sale.date);
+                    if (saleDate >= resetDateObj) {
+                        newTargetBalance += parseFloat(sale.price || 0);
+                    }
+                }
+            });
+        }
+        userToReset.targetBalance = newTargetBalance;
 
         // Show loading indicator while saving
         Swal.fire({

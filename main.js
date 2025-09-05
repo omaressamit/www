@@ -8,8 +8,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Database Schema Version for migration tracking
-const DB_SCHEMA_VERSION = "2.0"; // App version
+// Application version (for display only, not for logic)
+const APP_VERSION = "2.1";
 
 // Database Structure Constants
 const DB_PATHS = {
@@ -26,7 +26,7 @@ const DB_PATHS = {
 window.addEventListener('DOMContentLoaded', function() {
     const versionEl = document.getElementById('app-version');
     if (versionEl) {
-        versionEl.textContent = `App Version: ${DB_SCHEMA_VERSION}`;
+        versionEl.textContent = `App Version: ${APP_VERSION}`;
     }
 });
 function initializeDatabaseManagers() {
@@ -88,6 +88,36 @@ function getBranchNameById(branchId) {
 
 // Check for remembered login on page load
 window.onload = async function () {
+    // Check database version before anything else
+    let dbVersion = null;
+    try {
+        const versionSnapshot = await database.ref('/schemaVersion').once('value');
+        dbVersion = versionSnapshot.val();
+    } catch (e) {
+        dbVersion = null;
+    }
+    if (!dbVersion) {
+        Swal.fire({
+            title: 'خطأ في قراءة إصدار قاعدة البيانات',
+            text: 'تعذر قراءة إصدار قاعدة البيانات. يرجى المحاولة لاحقاً أو الاتصال بالدعم.',
+            icon: 'error',
+            allowOutsideClick: false
+        });
+        return;
+    }
+    // Compare app version and database version
+    if (APP_VERSION < dbVersion) {
+        Swal.fire({
+            title: 'إصدار التطبيق قديم',
+            text: `يرجى تحديث الصفحة للحصول على أحدث إصدار من التطبيق. إصدار قاعدة البيانات الحالي هو ${dbVersion}.`,
+            icon: 'error',
+            allowOutsideClick: false,
+            confirmButtonText: 'تحديث الصفحة'
+        }).then(() => {
+            location.reload();
+        });
+        return;
+    }
     // تهيئة مديري قاعدة البيانات أولاً
     initializeDatabaseManagers();
 
@@ -628,18 +658,21 @@ async function saveData() {
     console.log("Attempting to save data...");
     try {
         // Save the entire new structure, including schema version
+        // Use the database version for saving
+        const versionSnapshot = await database.ref('/schemaVersion').once('value');
+        const dbVersion = versionSnapshot.val() || APP_VERSION;
         await database.ref('/').set({
             users: users,
             branchMetadata: branchMetadata,
             branchData: branchData,
-            schemaVersion: DB_SCHEMA_VERSION
+            schemaVersion: dbVersion
         });
         // Add audit log entry
         const auditEntry = {
             timestamp: new Date().toISOString(),
             action: 'SAVE_DATA',
             user: currentUser ? currentUser.username : 'system',
-            schemaVersion: DB_SCHEMA_VERSION
+            schemaVersion: dbVersion
         };
         await database.ref(DB_PATHS.AUDIT_LOG).push(auditEntry);
         console.log('Data and schema version saved successfully to Firebase');
