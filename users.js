@@ -282,17 +282,6 @@ async function resetUserTarget(usernameToReset) {
     if (!confirmResult.isConfirmed) return;
 
     try {
-        // Calculate current target (total sales) for the user
-        let currentTarget = 0;
-        for (const branchId in branchData) {
-            const salesList = branchData[branchId]?.sales || [];
-            salesList.forEach(sale => {
-                if (sale.user === usernameToReset) {
-                    currentTarget += parseFloat(sale.price || 0);
-                }
-            });
-        }
-
         // Always allow reset, even if target is 0
         const userToReset = users.find(u => u.username === usernameToReset);
         if (!userToReset) {
@@ -300,10 +289,12 @@ async function resetUserTarget(usernameToReset) {
             return;
         }
 
-    userToReset.targetBalance = 0;
-    userToReset.targetResetDate = new Date().toISOString();
+        // Directly reset targetBalance and record metadata
+        const previousTarget = userToReset.targetBalance || 0;
+        userToReset.targetBalance = 0;
+        userToReset.targetResetDate = new Date().toISOString();
         userToReset.targetResetBy = currentUser.username;
-        userToReset.targetBeforeReset = currentTarget; // Store the target value before reset
+        userToReset.targetBeforeReset = previousTarget; // Store the target value before reset
         userToReset.targetResetCount = (userToReset.targetResetCount || 0) + 1;
 
         // Show loading indicator while saving
@@ -314,10 +305,13 @@ async function resetUserTarget(usernameToReset) {
         });
 
         // Save and confirm persistence before allowing further actions
+        let saveSuccess = false;
         if (typeof saveData === 'function') {
             await saveData();
+            saveSuccess = true;
         } else {
             await database.ref('/users').set(users);
+            saveSuccess = true;
         }
 
         // Reload users from database to confirm reset fields are present
@@ -326,12 +320,16 @@ async function resetUserTarget(usernameToReset) {
         }
 
         Swal.close();
-        document.dispatchEvent(new CustomEvent('targetResetted'));
-        Swal.fire({
-            title: 'تم',
-            text: `تم تسجيل تصفير التارجت للمستخدم "${usernameToReset}" (كان ${currentTarget.toFixed(2)}) مع الاحتفاظ بجميع السجلات التاريخية.`,
-            icon: 'success'
-        });
+        if (saveSuccess) {
+            document.dispatchEvent(new CustomEvent('targetResetted'));
+            Swal.fire({
+                title: 'تم',
+                text: `تم تسجيل تصفير التارجت للمستخدم "${usernameToReset}" (كان ${previousTarget.toFixed(2)}) مع الاحتفاظ بجميع السجلات التاريخية.`,
+                icon: 'success'
+            });
+        } else {
+            Swal.fire('خطأ', 'فشل حفظ تصفير التارجت. لم يتم تغيير أي بيانات.', 'error');
+        }
     } catch (error) {
         Swal.close();
         handleError(error, `خطأ أثناء تصفير تارجت المستخدم ${usernameToReset}`);

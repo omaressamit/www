@@ -9,7 +9,7 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // Database Schema Version for migration tracking
-const DB_SCHEMA_VERSION = "2.0";
+const DB_SCHEMA_VERSION = "2.0"; // App version
 
 // Database Structure Constants
 const DB_PATHS = {
@@ -22,6 +22,13 @@ const DB_PATHS = {
 };
 
 // تهيئة مديري قاعدة البيانات بعد تحميل Firebase
+// Display app version in footer
+window.addEventListener('DOMContentLoaded', function() {
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) {
+        versionEl.textContent = `App Version: ${DB_SCHEMA_VERSION}`;
+    }
+});
 function initializeDatabaseManagers() {
     // تهيئة مدير قاعدة البيانات
     if (typeof DatabaseManager !== 'undefined') {
@@ -167,7 +174,6 @@ window.onload = async function () {
 
     // --- Event Listeners ---
     // Note: Many listeners might need adjustments based on the refactored functions
-    document.addEventListener('dataSaved', loadData); // Might trigger reload, ensure functions handle new structure
     document.addEventListener('productAdded', updateProductsTable); // Will need branch context
     document.addEventListener('expenseRecorded', showExpenses); // Will need branch context or "All" logic
     document.addEventListener('userAdded', updateUsersList);
@@ -561,8 +567,39 @@ async function loadData() {
         }
 
 
-        console.log("Data loaded successfully.");
-        document.dispatchEvent(new CustomEvent('dataLoaded')); // Notify other parts of the app
+        // --- Post-load validation for infallibility ---
+        // Track if any defaults were set
+        let needsSaveAfterValidation = false;
+        for (const branchId in branchData) {
+            const branch = branchData[branchId];
+            if (!Array.isArray(branch.products)) { branch.products = []; needsSaveAfterValidation = true; }
+            if (!Array.isArray(branch.sales)) { branch.sales = []; needsSaveAfterValidation = true; }
+            if (!Array.isArray(branch.returns)) { branch.returns = []; needsSaveAfterValidation = true; }
+            if (!Array.isArray(branch.receiving)) { branch.receiving = []; needsSaveAfterValidation = true; }
+            if (!Array.isArray(branch.expenses)) { branch.expenses = []; needsSaveAfterValidation = true; }
+            if (!Array.isArray(branch.workshopOperations)) { branch.workshopOperations = []; needsSaveAfterValidation = true; }
+            if (!branch.lastUpdated) { branch.lastUpdated = new Date().toISOString(); needsSaveAfterValidation = true; }
+        }
+        users.forEach(user => {
+            if (typeof user.targetBalance !== 'number') { user.targetBalance = 0; needsSaveAfterValidation = true; }
+            if (!user.role) { user.role = 'user'; needsSaveAfterValidation = true; }
+            if (!Array.isArray(user.workDays)) { user.workDays = []; needsSaveAfterValidation = true; }
+            if (typeof user.targetResetCount !== 'number') { user.targetResetCount = 0; needsSaveAfterValidation = true; }
+        });
+        for (const branchId in branchMetadata) {
+            const meta = branchMetadata[branchId];
+            if (!meta.name) { meta.name = ''; needsSaveAfterValidation = true; }
+            if (!Array.isArray(meta.users)) { meta.users = []; needsSaveAfterValidation = true; }
+        }
+
+        // Persist changes if any defaults were set
+        if (needsSaveAfterValidation && navigator.onLine) {
+            await saveData();
+            console.log("Database updated with validated defaults.");
+        }
+
+        console.log("Data loaded and validated successfully.");
+        document.dispatchEvent(new CustomEvent('dataLoaded'));
 
         // Refresh UI based on current page (call showPage again to trigger updates)
         const activePageLink = document.querySelector('.nav-bar a.active');
@@ -590,13 +627,22 @@ async function saveData() {
     }
     console.log("Attempting to save data...");
     try {
-        // Save the entire new structure
+        // Save the entire new structure, including schema version
         await database.ref('/').set({
             users: users,
             branchMetadata: branchMetadata,
-            branchData: branchData
+            branchData: branchData,
+            schemaVersion: DB_SCHEMA_VERSION
         });
-        console.log('Data saved successfully to Firebase');
+        // Add audit log entry
+        const auditEntry = {
+            timestamp: new Date().toISOString(),
+            action: 'SAVE_DATA',
+            user: currentUser ? currentUser.username : 'system',
+            schemaVersion: DB_SCHEMA_VERSION
+        };
+        await database.ref(DB_PATHS.AUDIT_LOG).push(auditEntry);
+        console.log('Data and schema version saved successfully to Firebase');
         document.dispatchEvent(new CustomEvent('dataSaved'));
         return Promise.resolve();
     } catch (error) {
