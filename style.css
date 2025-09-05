@@ -626,6 +626,72 @@ button:disabled:hover {
     background-color: #4CAF50;
     color: white;
 }
+
+/* Responsive Design for Users Page */
+@media screen and (max-width: 1024px) {
+    #users .container,
+    #users {
+        max-width: 100%;
+        padding: 10px;
+        margin: 5px auto;
+        box-sizing: border-box;
+    }
+    .table-wrapper {
+        margin: 0 -10px;
+        width: calc(100% + 20px);
+        border-radius: 0;
+        overflow-x: auto;
+    }
+    #users-list th, #users-list td {
+        padding: 6px;
+        font-size: 15px;
+        min-width: 120px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    #users .container,
+    #users {
+        padding: 6px;
+    }
+    #user-management label,
+    #user-management input,
+    #user-management select,
+    #user-management button {
+        font-size: 15px;
+        padding: 8px;
+        margin-bottom: 10px;
+    }
+    #users-list th, #users-list td {
+        padding: 5px;
+        font-size: 13px;
+        min-width: 100px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    #users .container,
+    #users {
+        padding: 2px;
+    }
+    #user-management label,
+    #user-management input,
+    #user-management select,
+    #user-management button {
+        font-size: 13px;
+        padding: 6px;
+        margin-bottom: 8px;
+    }
+    #users-list th, #users-list td {
+        padding: 3px;
+        font-size: 11px;
+        min-width: 80px;
+    }
+    .table-wrapper {
+        margin: 0 -5px;
+        width: calc(100% + 10px);
+    }
+}
 /* Logo Image Styles (Login Page) */
 #logo-image {
     max-width: 80%; /* Adjust as needed */
