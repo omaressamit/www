@@ -16,6 +16,19 @@ function setDefaultSaleDate() {
 }
 
 async function recordSale() {
+    const recordSaleBtn = document.querySelector('button[onclick="recordSale()"]');
+    const now = Date.now();
+    if (now - lastSaleClickTime < 5000) {
+        Swal.fire('تنبيه', 'يرجى الانتظار 5 ثوانٍ قبل تسجيل عملية بيع أخرى.', 'warning');
+        return;
+    }
+    lastSaleClickTime = now; // Update timestamp immediately
+    if (recordSaleBtn) {
+        recordSaleBtn.disabled = true;
+        recordSaleBtn.style.opacity = '0.5';
+        recordSaleBtn.style.cursor = 'not-allowed';
+    }
+
     if (!currentUser) {
         Swal.fire('خطأ', 'يجب تسجيل الدخول أولاً', 'error');
         return;
@@ -29,13 +42,6 @@ async function recordSale() {
             icon: 'warning',
             confirmButtonText: 'موافق'
         });
-        return;
-    }
-
-    // Double-click prevention:
-    const now = Date.now();
-    if (now - lastSaleClickTime < 5000) {
-        Swal.fire('تنبيه', 'يرجى الانتظار 5 ثوانٍ قبل تسجيل عملية بيع أخرى.', 'warning');
         return;
     }
 
@@ -174,8 +180,6 @@ async function recordSale() {
         }
     }
 
-    lastSaleClickTime = now; // Update timestamp
-
     try {
         // Save the updated branch data (products and sales list)
         await database.ref(`/branchData/${branchId}`).update({
@@ -209,6 +213,14 @@ async function recordSale() {
         handleError(error, "خطأ أثناء حفظ عملية البيع");
         // Revert local changes (difficult)
         await loadData(); // Reload data
+    } finally {
+        if (recordSaleBtn) {
+            setTimeout(() => {
+                recordSaleBtn.disabled = false;
+                recordSaleBtn.style.opacity = '1';
+                recordSaleBtn.style.cursor = 'pointer';
+            }, 5000);
+        }
     }
 }
 
