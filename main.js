@@ -9,7 +9,7 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // Application version (for display only, not for logic)
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 
 // Database Structure Constants
 const DB_PATHS = {
@@ -215,11 +215,11 @@ window.onload = async function () {
     document.addEventListener('targetResetted', updateUsersList); // Target calculation is now complex
     document.addEventListener('returnDeleted', () => { // Refresh sales history after delete
          const activePageId = document.querySelector('.nav-bar a.active')?.getAttribute('href')?.substring(1);
-         if(activePageId === 'sales-history') showSalesHistory();
+         if(activePageId === 'sales-history') performSearch();
     });
     document.addEventListener('saleDeleted', () => { // Refresh sales history after delete
-        const activePageId = document.querySelector('.nav-bar a.active')?.getAttribute('href')?.substring(1);
-        if(activePageId === 'sales-history') showSalesHistory();
+    const activePageId = document.querySelector('.nav-bar a.active')?.getAttribute('href')?.substring(1);
+    if(activePageId === 'sales-history') performSearch();
    });
     document.addEventListener('receivingDeleted', () => { // Refresh receiving history
         const activePageId = document.querySelector('.nav-bar a.active')?.getAttribute('href')?.substring(1);
@@ -265,7 +265,9 @@ window.onload = async function () {
      // Add Event Listener to update employee dropdown and product select when sales branch changes
      const salesBranchSelect = document.getElementById('branch-select');
      if (salesBranchSelect) {
-         salesBranchSelect.addEventListener('change', function() {
+         salesBranchSelect.addEventListener('change', async function() {
+             const versionOk = await checkFirebaseAppVersion();
+             if (!versionOk) return;
              populateBranchEmployeeSelect(); // Update employee dropdown
              populateProductSelect('sales', this.value); // Update product select
              updateDailySalesTable(); // Update daily sales table for the new branch
@@ -748,6 +750,30 @@ function logout() {
         title: 'تم', text: 'تم تسجيل الخروج بنجاح', icon: 'success',
         timer: 1500, showConfirmButton: false
     });
+}
+
+// Centralized Firebase App Version check
+async function checkFirebaseAppVersion() {
+    try {
+        const versionSnapshot = await database.ref('/schemaVersion').once('value');
+        const dbVersion = versionSnapshot.val();
+        if (APP_VERSION < dbVersion) {
+            await Swal.fire({
+                title: 'إصدار التطبيق قديم',
+                text: `يرجى تحديث الصفحة للحصول على أحدث إصدار من التطبيق. إصدار قاعدة البيانات الحالي هو ${dbVersion}.`,
+                icon: 'error',
+                allowOutsideClick: false,
+                confirmButtonText: 'تحديث الصفحة'
+            });
+            location.reload();
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error('خطأ في التحقق من إصدار التطبيق:', e);
+        Swal.fire('خطأ', 'تعذر التحقق من إصدار التطبيق. يرجى المحاولة لاحقاً.', 'error');
+        return false;
+    }
 }
 
 // Centralized Error Handler

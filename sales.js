@@ -147,18 +147,26 @@ async function recordSale() {
 
     branchData[branchId].sales.push(newSaleRecord);
 
-    // Increment user's targetBalance only if sale is after last reset date
+    // Robustly recalculate user's targetBalance after sale
     const userObj = users.find(u => u.username === currentUser.username);
     if (userObj) {
-        let addToTarget = true;
-        if (userObj.targetResetDate) {
-            const resetDateObj = new Date(userObj.targetResetDate);
-            const saleDateObj = new Date(newSaleRecord.date);
-            addToTarget = saleDateObj >= resetDateObj;
+        function recalculateUserTargetBalance(userObj) {
+            let newTargetBalance = 0;
+            const resetDateObj = userObj.targetResetDate ? new Date(userObj.targetResetDate) : null;
+            for (const branchId in branchData) {
+                const salesList = branchData[branchId]?.sales || [];
+                salesList.forEach(sale => {
+                    if (sale.user === userObj.username) {
+                        const saleDate = new Date(sale.date);
+                        if (!resetDateObj || saleDate >= resetDateObj) {
+                            newTargetBalance += parseFloat(sale.price || 0);
+                        }
+                    }
+                });
+            }
+            userObj.targetBalance = newTargetBalance;
         }
-        if (addToTarget) {
-            userObj.targetBalance = (userObj.targetBalance || 0) + salePrice;
-        }
+        recalculateUserTargetBalance(userObj);
         if (typeof saveData === 'function') {
             await saveData();
         } else if (typeof database !== 'undefined') {
