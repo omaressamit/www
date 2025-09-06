@@ -674,7 +674,8 @@ async function saveData() {
             timestamp: new Date().toISOString(),
             action: 'SAVE_DATA',
             user: currentUser ? currentUser.username : 'system',
-            schemaVersion: dbVersion
+            schemaVersion: dbVersion,
+            appVersion: APP_VERSION // Add application code version
         };
         await database.ref(DB_PATHS.AUDIT_LOG).push(auditEntry);
         console.log('Data and schema version saved successfully to Firebase');
@@ -725,6 +726,15 @@ async function login() {
         if(navToggle) navToggle.style.display = 'block';
 
         updateAdminOnlyElementsVisibility(); // Update visibility based on role
+
+        // Audit log for login
+        const auditEntry = {
+            timestamp: new Date().toISOString(),
+            action: 'LOGIN',
+            user: currentUser.username,
+            appVersion: APP_VERSION
+        };
+        await database.ref(DB_PATHS.AUDIT_LOG).push(auditEntry);
 
         await Swal.fire({
             title: 'مرحباً', text: 'تم تسجيل الدخول بنجاح', icon: 'success',
