@@ -212,41 +212,17 @@ async function recordSale() {
 function updateTargetDisplay() {
     if (!currentUser) return;
 
-    let totalSalesValue = 0;
-    // Get current user's reset date if any
-    const currentUserData = users.find(u => u.username === currentUser.username);
-    const resetDate = currentUserData?.targetResetDate ? new Date(currentUserData.targetResetDate) : null;
+        const targetTableBody = document.querySelector('#target-table tbody');
+        if (!targetTableBody) return;
 
-    // Iterate through all branches the user might have sold in
-    for (const branchId in branchData) {
-        const salesList = branchData[branchId]?.sales || [];
-        salesList.forEach(sale => {
-            if (sale.user === currentUser.username) {
-                // Only count sales after or on the last target reset date (date part only)
-                const saleDate = new Date(sale.date);
-                if (!resetDate || saleDate.toDateString() >= resetDate.toDateString()) {
-                    totalSalesValue += parseFloat(sale.price || 0);
-                }
-            }
-        });
-         // Workshop operations are excluded from employee targets
-         // const workshopList = branchData[branchId]?.workshopOperations || [];
-         // workshopList.forEach(op => {
-         //     if (op.user === currentUser.username) {
-         //         totalSalesValue += parseFloat(op.price || 0);
-         //     }
-         // });
-    }
-
-    const targetTableBody = document.querySelector('#target-table tbody');
-    if (!targetTableBody) return;
-
-    targetTableBody.innerHTML = ''; // Clear existing rows
-    const row = targetTableBody.insertRow();
-    row.innerHTML = `
-       <td>${currentUser.username}</td>
-       <td>${totalSalesValue.toFixed(2)}</td>
-     `;
+        targetTableBody.innerHTML = '';
+        const currentUserData = users.find(u => u.username === currentUser.username);
+        const targetBalance = currentUserData?.targetBalance || 0;
+        const row = targetTableBody.insertRow();
+        row.innerHTML = `
+             <td>${currentUser.username}</td>
+             <td>${targetBalance.toFixed(2)}</td>
+         `;
 }
 
 
